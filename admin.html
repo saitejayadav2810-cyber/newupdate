@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AGRIMETS — Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Base ──────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:        #09090f;
+      --surface:   #11111d;
+      --surface-2: #181826;
+      --border:    rgba(255,255,255,0.08);
+      --cyan:      #00e5ff;
+      --cyan-dim:  rgba(0,229,255,0.10);
+      --green:     #00e676;
+      --green-dim: rgba(0,230,118,0.10);
+      --red:       #ff5252;
+      --red-dim:   rgba(255,82,82,0.10);
+      --amber:     #ffab00;
+      --amber-dim: rgba(255,171,0,0.10);
+      --text:      #e8eaf6;
+      --muted:     #7986cb;
+      --r:         14px;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 0 0 60px;
+    }
+
+    /* ── Header ───────────────────────────────────────────────── */
+    .admin-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .admin-logo { font-size: 26px; }
+    .admin-title { font-size: 20px; font-weight: 800; color: var(--cyan); }
+    .admin-sub   { font-size: 13px; color: var(--muted); margin-top: 1px; }
+    .admin-status {
+      margin-left: auto;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; color: var(--muted);
+    }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.3s;
+    }
+    .status-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+    /* ── Main layout ──────────────────────────────────────────── */
+    .admin-main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    /* ── Section card ─────────────────────────────────────────── */
+    .section-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    .section-head {
+      display: flex; align-items: center; gap: 10px;
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-icon { font-size: 22px; }
+    .section-title { font-size: 16px; font-weight: 700; color: var(--text); }
+    .section-body  { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+    /* ── Form controls ────────────────────────────────────────── */
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label {
+      font-size: 13px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .form-input, .form-textarea, .form-select {
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--r);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 15px;
+      padding: 12px 14px;
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+    .form-input:focus, .form-textarea:focus, .form-select:focus {
+      border-color: var(--cyan);
+    }
+    .form-textarea { resize: vertical; min-height: 90px; line-height: 1.5; }
+    .form-select   { appearance: none; cursor: pointer; }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+
+    /* Preview bar */
+    .preview-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      border-radius: var(--r);
+      border: 1.5px solid var(--border);
+      font-size: 14px;
+      font-weight: 500;
+      min-height: 46px;
+      transition: all 0.2s;
+    }
+    .preview-bar.info    { background: rgba(0,180,255,0.10); border-color: rgba(0,180,255,0.25); }
+    .preview-bar.success { background: var(--green-dim);  border-color: rgba(0,230,118,0.25); }
+    .preview-bar.warning { background: var(--amber-dim);  border-color: rgba(255,171,0,0.30); }
+    .preview-bar.danger  { background: var(--red-dim);    border-color: rgba(255,82,82,0.30); }
+    .preview-emoji { font-size: 20px; flex-shrink: 0; }
+    .preview-text  { flex: 1; color: var(--text); }
+
+    /* Expire row */
+    .expire-row {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .expire-chip {
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: 30px;
+      padding: 6px 14px;
+      font-size: 13px; font-weight: 600;
+      color: var(--muted); cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .expire-chip.active, .expire-chip:hover {
+      border-color: var(--cyan); color: var(--cyan);
+    }
+
+    /* ── Buttons ──────────────────────────────────────────────── */
+    .btn-primary {
+      background: linear-gradient(135deg, #00e5ff 0%, #0080c8 100%);
+      color: #000;
+      border: none; border-radius: var(--r);
+      font-family: inherit; font-size: 15px; font-weight: 800;
+      padding: 14px 24px;
+      cursor: pointer; width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .btn-primary:hover   { opacity: 0.9; }
+    .btn-primary:active  { transform: scale(0.97); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-danger {
+      background: var(--red-dim);
+      border: 1.5px solid var(--red);
+      color: var(--red);
+      border-radius: var(--r);
+      font-family: inherit; font-size: 14px; font-weight: 700;
+      padding: 10px 18px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-danger:hover { background: rgba(255,82,82,0.18); }
+
+    .btn-outline {
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      color: var(--muted);
+      border-radius: var(--r);
+      font-family: inherit; font-size: 14px; font-weight: 600;
+      padding: 10px 18px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-outline:hover { border-color: var(--cyan); color: var(--cyan); }
+
+    /* ── Live announcements list ──────────────────────────────── */
+    #live-list { display: flex; flex-direction: column; gap: 12px; }
+    .live-item {
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--r);
+      padding: 14px;
+      display: flex; align-items: flex-start; gap: 12px;
+    }
+    .live-item-emoji { font-size: 22px; flex-shrink: 0; margin-top: 1px; }
+    .live-item-body  { flex: 1; min-width: 0; }
+    .live-item-msg   { font-size: 14px; color: var(--text); line-height: 1.5; margin-bottom: 4px; word-break: break-word; }
+    .live-item-meta  { font-size: 12px; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; }
+    .meta-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--cyan-dim); color: var(--cyan);
+      border-radius: 20px; padding: 2px 8px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+    }
+    .meta-badge.success { background: var(--green-dim); color: var(--green); }
+    .meta-badge.warning { background: var(--amber-dim); color: var(--amber); }
+    .meta-badge.danger  { background: var(--red-dim);   color: var(--red);   }
+    .live-item-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .empty-live {
+      text-align: center; padding: 28px 16px;
+      color: var(--muted); font-size: 14px;
+    }
+    .empty-live-icon { font-size: 36px; margin-bottom: 10px; }
+
+    /* ── Stats bar ────────────────────────────────────────────── */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    .stat-box {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 16px 14px;
+      text-align: center;
+    }
+    .stat-box-val {
+      font-size: 28px; font-weight: 800;
+      color: var(--cyan); margin-bottom: 4px;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .stat-box-label { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    /* ── Login gate ───────────────────────────────────────────── */
+    #login-gate {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999; padding: 24px;
+    }
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 40px 28px;
+      width: 100%; max-width: 340px;
+      text-align: center;
+    }
+    .login-icon  { font-size: 52px; margin-bottom: 14px; }
+    .login-title { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+    .login-sub   { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
+    .login-error { font-size: 13px; color: var(--red); margin-top: 10px; min-height: 20px; }
+    #login-pass  { margin-bottom: 14px; text-align: left; }
+
+    /* ── Toast ────────────────────────────────────────────────── */
+    #admin-toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      padding: 11px 22px;
+      font-size: 14px; font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      z-index: 99999;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    #admin-toast.show { opacity: 1; }
+
+    /* ── Loading ──────────────────────────────────────────────── */
+    .spinner {
+      width: 22px; height: 22px;
+      border: 3px solid rgba(0,229,255,0.25);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Char counter ─────────────────────────────────────────── */
+    .char-counter { font-size: 12px; color: var(--muted); text-align: right; }
+    .char-counter.over { color: var(--red); }
+  </style>
+</head>
+<body>
+
+<!-- Login Gate -->
+<div id="login-gate">
+  <div class="login-card">
+    <div class="login-icon">🔐</div>
+    <div class="login-title">Admin Access</div>
+    <div class="login-sub">AGRIMETS Admin Panel</div>
+    <div class="form-group" id="login-pass">
+      <label class="form-label">Password</label>
+      <input class="form-input" id="admin-pass" type="password"
+             placeholder="Enter admin password" autocomplete="current-password" />
+    </div>
+    <button class="btn-primary" id="login-btn">🔓 Enter Panel</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- Header -->
+<header class="admin-header">
+  <span class="admin-logo">⚡</span>
+  <div>
+    <div class="admin-title">AGRIMETS Admin</div>
+    <div class="admin-sub">Announcement &amp; App Manager</div>
+  </div>
+  <div class="admin-status">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-label">Connecting…</span>
+  </div>
+</header>
+
+<main class="admin-main">
+
+  <!-- ── Live Stats ──────────────────────────────────────── -->
+  <div class="section-card">
+    <div class="section-head">
+      <span class="section-icon">📊</span>
+      <span class="section-title">Live Stats</span>
+      <button class="btn-outline" style="margin-left:auto;padding:6px 14px;font-size:13px;" id="btn-refresh-stats">↻ Refresh</button>
+    </div>
+    <div class="section-body">
+      <div class="stats-bar">
+        <div class="stat-box">
+          <div class="stat-box-val" id="stat-online">—</div>
+          <div class="stat-box-label">🟢 Online Now</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-val" id="stat-total">—</div>
+          <div class="stat-box-label">👥 Total Users</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-val" id="stat-active-ann">—</div>
+          <div class="stat-box-label">📢 Active Banners</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Push Announcement ──────────────────────────────── -->
+  <div class="section-card">
+    <div class="section-head">
+      <span class="section-icon">📢</span>
+      <span class="section-title">Push Announcement</span>
+    </div>
+    <div class="section-body">
+
+      <!-- Message -->
+      <div class="form-group">
+        <label class="form-label">Message</label>
+        <textarea class="form-textarea" id="ann-msg" maxlength="200"
+                  placeholder="Type your announcement here… (max 200 chars)"></textarea>
+        <div class="char-counter" id="char-counter">0 / 200</div>
+      </div>
+
+      <!-- Emoji + Type row -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Emoji</label>
+          <input class="form-input" id="ann-emoji" type="text"
+                 value="📢" maxlength="4" placeholder="📢" style="font-size:22px;text-align:center;" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Type / Colour</label>
+          <select class="form-select" id="ann-type">
+            <option value="info">🔵 Info</option>
+            <option value="success">🟢 Success</option>
+            <option value="warning">🟡 Warning</option>
+            <option value="danger">🔴 Danger / Alert</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Live preview -->
+      <div class="form-group">
+        <label class="form-label">Preview</label>
+        <div class="preview-bar info" id="ann-preview">
+          <span class="preview-emoji" id="prev-emoji">📢</span>
+          <span class="preview-text"  id="prev-text">Your message will appear here…</span>
+        </div>
+      </div>
+
+      <!-- Expires -->
+      <div class="form-group">
+        <label class="form-label">Expires After</label>
+        <div class="expire-row" id="expire-chips">
+          <button class="expire-chip" data-hours="1">1 hr</button>
+          <button class="expire-chip active" data-hours="6">6 hrs</button>
+          <button class="expire-chip" data-hours="24">24 hrs</button>
+          <button class="expire-chip" data-hours="72">3 days</button>
+          <button class="expire-chip" data-hours="0">Never</button>
+        </div>
+      </div>
+
+      <button class="btn-primary" id="btn-push-ann">
+        <span id="push-btn-label">📤 Push Announcement</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Active Announcements ───────────────────────────── -->
+  <div class="section-card">
+    <div class="section-head">
+      <span class="section-icon">📋</span>
+      <span class="section-title">Active Announcements</span>
+      <button class="btn-outline" style="margin-left:auto;padding:6px 14px;font-size:13px;" id="btn-load-ann">↻ Load</button>
+    </div>
+    <div class="section-body">
+      <div id="live-list">
+        <div class="empty-live">
+          <div class="empty-live-icon">📭</div>
+          Click "Load" to see active announcements
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Toast -->
+<div id="admin-toast"></div>
+
+<script>
+// ── CONFIG ───────────────────────────────────────────────────
+const FB_URL      = 'https://agrimets-a3c9c-default-rtdb.firebaseio.com';
+// Change this password in production — store in Firebase or env var for real security
+const ADMIN_PASS  = 'agrimets2025';
+const FB_ONLINE_TTL = 3 * 60 * 1000; // 3 min
+
+// ── Login ────────────────────────────────────────────────────
+const loginGate = document.getElementById('login-gate');
+const loginBtn  = document.getElementById('login-btn');
+const loginErr  = document.getElementById('login-error');
+
+loginBtn.addEventListener('click', () => {
+  const val = document.getElementById('admin-pass').value.trim();
+  if (val === ADMIN_PASS) {
+    loginGate.style.opacity = '0';
+    loginGate.style.transition = 'opacity 0.3s';
+    setTimeout(() => loginGate.remove(), 300);
+    init();
+  } else {
+    loginErr.textContent = '❌ Incorrect password.';
+    document.getElementById('admin-pass').value = '';
+    document.getElementById('admin-pass').focus();
+  }
+});
+document.getElementById('admin-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') loginBtn.click();
+});
+
+// ── Firebase helpers ─────────────────────────────────────────
+async function fbGet(path, params = '') {
+  try {
+    const r = await fetch(`${FB_URL}/${path}.json${params}`, { cache: 'no-store' });
+    return r.ok ? await r.json() : null;
+  } catch { return null; }
+}
+async function fbPut(path, data) {
+  try {
+    const r = await fetch(`${FB_URL}/${path}.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return r.ok ? await r.json() : null;
+  } catch { return null; }
+}
+async function fbPatch(path, data) {
+  try {
+    const r = await fetch(`${FB_URL}/${path}.json`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return r.ok ? await r.json() : null;
+  } catch { return null; }
+}
+async function fbDelete(path) {
+  try {
+    const r = await fetch(`${FB_URL}/${path}.json`, { method: 'DELETE' });
+    return r.ok;
+  } catch { return false; }
+}
+
+// ── Toast ────────────────────────────────────────────────────
+let _toastTimer;
+function toast(msg, dur = 2500) {
+  const el = document.getElementById('admin-toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), dur);
+}
+
+// ── Status indicator ─────────────────────────────────────────
+async function checkConnection() {
+  const dot   = document.getElementById('status-dot');
+  const label = document.getElementById('status-label');
+  const data  = await fbGet('agrimets/presence');
+  if (data !== null) {
+    dot.classList.add('connected');
+    label.textContent = 'Firebase connected';
+  } else {
+    dot.classList.remove('connected');
+    label.textContent = 'No connection';
+  }
+}
+
+// ── Stats ────────────────────────────────────────────────────
+async function loadStats() {
+  const [presence, users, anns] = await Promise.all([
+    fbGet('agrimets/presence'),
+    fbGet('agrimets/users', '?shallow=true'),
+    fbGet('agrimets/announcements'),
+  ]);
+
+  const now = Date.now();
+  let online = 0, total = 0, activeAnn = 0;
+
+  if (presence && typeof presence === 'object') {
+    Object.values(presence).forEach(ts => {
+      if (now - Number(ts) < FB_ONLINE_TTL) online++;
+    });
+  }
+  if (users && typeof users === 'object') total = Object.keys(users).length;
+  if (anns  && typeof anns  === 'object') {
+    Object.values(anns).forEach(a => {
+      if (a && a.active && (!a.expiresAt || a.expiresAt > now)) activeAnn++;
+    });
+  }
+
+  document.getElementById('stat-online').textContent = online.toLocaleString('en-IN');
+  document.getElementById('stat-total').textContent  = total.toLocaleString('en-IN');
+  document.getElementById('stat-active-ann').textContent = activeAnn;
+}
+
+// ── Preview ──────────────────────────────────────────────────
+function updatePreview() {
+  const msg   = document.getElementById('ann-msg').value.trim() || 'Your message will appear here…';
+  const emoji = document.getElementById('ann-emoji').value.trim() || '📢';
+  const type  = document.getElementById('ann-type').value;
+  const len   = document.getElementById('ann-msg').value.length;
+
+  document.getElementById('prev-emoji').textContent  = emoji;
+  document.getElementById('prev-text').textContent   = msg;
+  const bar = document.getElementById('ann-preview');
+  bar.className = 'preview-bar ' + type;
+
+  const counter = document.getElementById('char-counter');
+  counter.textContent = `${len} / 200`;
+  counter.className   = 'char-counter' + (len > 180 ? ' over' : '');
+}
+document.getElementById('ann-msg').addEventListener('input', updatePreview);
+document.getElementById('ann-emoji').addEventListener('input', updatePreview);
+document.getElementById('ann-type').addEventListener('change', updatePreview);
+
+// ── Expire chips ─────────────────────────────────────────────
+let selectedHours = 6;
+document.getElementById('expire-chips').addEventListener('click', e => {
+  const chip = e.target.closest('.expire-chip');
+  if (!chip) return;
+  document.querySelectorAll('.expire-chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  selectedHours = Number(chip.dataset.hours);
+});
+
+// ── Push announcement ─────────────────────────────────────────
+document.getElementById('btn-push-ann').addEventListener('click', async () => {
+  const msg   = document.getElementById('ann-msg').value.trim();
+  const emoji = document.getElementById('ann-emoji').value.trim() || '📢';
+  const type  = document.getElementById('ann-type').value;
+
+  if (!msg) { toast('⚠️ Please enter a message'); return; }
+
+  const labelEl = document.getElementById('push-btn-label');
+  labelEl.innerHTML = '<span class="spinner"></span> Pushing…';
+  document.getElementById('btn-push-ann').disabled = true;
+
+  const now      = Date.now();
+  const expires  = selectedHours > 0 ? now + selectedHours * 3600_000 : 0;
+  const id       = 'ann_' + now;
+
+  const payload = {
+    message:   msg,
+    emoji,
+    type,
+    active:    true,
+    createdAt: now,
+    expiresAt: expires || null,
+  };
+
+  const ok = await fbPut(`agrimets/announcements/${id}`, payload);
+
+  labelEl.textContent = '📤 Push Announcement';
+  document.getElementById('btn-push-ann').disabled = false;
+
+  if (ok) {
+    toast('✅ Announcement pushed! Users will see it on next load.');
+    document.getElementById('ann-msg').value = '';
+    updatePreview();
+    loadStats();
+    loadActiveAnnouncements();
+  } else {
+    toast('❌ Failed to push. Check Firebase connection.');
+  }
+});
+
+// ── Load active announcements ─────────────────────────────────
+async function loadActiveAnnouncements() {
+  const list = document.getElementById('live-list');
+  list.innerHTML = '<div style="text-align:center;padding:20px;color:#7986cb;"><span class="spinner"></span></div>';
+
+  const data = await fbGet('agrimets/announcements');
+  const now  = Date.now();
+
+  if (!data || !Object.keys(data).length) {
+    list.innerHTML = `<div class="empty-live"><div class="empty-live-icon">📭</div>No announcements yet</div>`;
+    return;
+  }
+
+  const items = Object.entries(data)
+    .map(([id, ann]) => ({ ...ann, id }))
+    .filter(a => a.message)
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+  if (!items.length) {
+    list.innerHTML = `<div class="empty-live"><div class="empty-live-icon">📭</div>No announcements yet</div>`;
+    return;
+  }
+
+  list.innerHTML = '';
+  items.forEach(ann => {
+    const isActive  = ann.active && (!ann.expiresAt || ann.expiresAt > now);
+    const expStr    = ann.expiresAt ? new Date(ann.expiresAt).toLocaleString('en-IN', { dateStyle:'short', timeStyle:'short' }) : 'Never';
+    const createdStr = new Date(ann.createdAt).toLocaleString('en-IN', { dateStyle:'short', timeStyle:'short' });
+
+    const el = document.createElement('div');
+    el.className = 'live-item';
+    el.innerHTML = `
+      <div class="live-item-emoji">${ann.emoji || '📢'}</div>
+      <div class="live-item-body">
+        <div class="live-item-msg">${escHtml(ann.message || '')}</div>
+        <div class="live-item-meta">
+          <span class="meta-badge ${ann.type || 'info'}">${ann.type || 'info'}</span>
+          <span>${isActive ? '🟢 Active' : '⚫ Inactive'}</span>
+          <span>Created: ${createdStr}</span>
+          <span>Expires: ${expStr}</span>
+        </div>
+      </div>
+      <div class="live-item-actions">
+        <button class="btn-outline" data-id="${ann.id}" data-action="${ann.active ? 'deactivate' : 'activate'}"
+                style="padding:6px 12px;font-size:12px;">
+          ${ann.active ? '⏸ Pause' : '▶ Activate'}
+        </button>
+        <button class="btn-danger" data-id="${ann.id}" data-action="delete"
+                style="padding:6px 12px;font-size:12px;">✕</button>
+      </div>
+    `;
+    list.appendChild(el);
+  });
+
+  // Wire action buttons
+  list.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const { id, action } = btn.dataset;
+      btn.disabled = true;
+      if (action === 'delete') {
+        const ok = await fbDelete(`agrimets/announcements/${id}`);
+        if (ok) { toast('🗑 Deleted'); loadActiveAnnouncements(); loadStats(); }
+        else toast('❌ Delete failed');
+      } else if (action === 'deactivate') {
+        await fbPatch(`agrimets/announcements/${id}`, { active: false });
+        toast('⏸ Paused'); loadActiveAnnouncements(); loadStats();
+      } else if (action === 'activate') {
+        await fbPatch(`agrimets/announcements/${id}`, { active: true });
+        toast('▶ Activated'); loadActiveAnnouncements(); loadStats();
+      }
+      btn.disabled = false;
+    });
+  });
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('btn-load-ann').addEventListener('click', loadActiveAnnouncements);
+document.getElementById('btn-refresh-stats').addEventListener('click', () => { loadStats(); checkConnection(); toast('↻ Stats refreshed'); });
+
+// ── Init ─────────────────────────────────────────────────────
+function init() {
+  checkConnection();
+  loadStats();
+  loadActiveAnnouncements();
+  updatePreview();
+}
+</script>
+</body>
+</html>

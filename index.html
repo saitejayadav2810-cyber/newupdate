@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a12" />
+  <title>AGRIMETS</title>
+
+  <!-- ── Service Worker: forces network-first on every load ── -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(function(reg) { reg.update(); })
+        .catch(function(e) { console.warn('[SW] Registration failed:', e); });
+    }
+  </script>
+
+  <!-- Telegram Web App SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Cache-busting: appends ?v=timestamp so browser always loads latest file -->
+  <script>
+    (function() {
+      var v = Date.now();
+      var css = document.createElement('link');
+      css.rel = 'stylesheet'; css.href = 'style.css?v=' + v;
+      document.head.appendChild(css);
+      window._cbv = v;
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════
+       SPLASH / LOADING SCREEN
+  ════════════════════════════════════════════════ -->
+  <div id="splash-screen" class="splash">
+    <div class="splash-content">
+      <div class="splash-logo">
+        <div class="splash-icon">⚡</div>
+        <h1 class="splash-title">AGRIMETS</h1>
+        <p class="splash-sub">Swipe Cards</p>
+      </div>
+      <div class="splash-loader">
+        <div class="loader-bar"><div class="loader-fill" id="loader-fill"></div></div>
+        <p class="loader-text" id="loader-text">Fetching today's cards…</p>
+      </div>
+    </div>
+    <div class="splash-credits">
+      <p class="splash-credits-label">App Developed By</p>
+      <p class="splash-credits-name">SAI TEJA</p>
+      <p class="splash-credits-qual">B.Sc (Hons) Agriculture · Agribusiness Management</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       MAIN APP SHELL
+  ════════════════════════════════════════════════ -->
+  <div id="app" class="app hidden">
+
+    <!-- TOP NAVIGATION -->
+    <header class="app-header">
+      <div class="header-left">
+        <span class="app-logo">⚡</span>
+        <span class="app-title">AGRIMETS</span>
+      </div>
+      <div class="header-right">
+        <button class="icon-btn theme-toggle-btn" id="theme-toggle-btn" title="Toggle theme" aria-label="Toggle light/dark theme">
+          <span class="theme-toggle-icon" id="theme-toggle-icon">☀️</span>
+        </button>
+        <button class="icon-btn" id="streak-btn" title="Streak">
+          <span class="streak-fire">🔥</span>
+          <span class="streak-count" id="header-streak">0</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ══════════════════════════════════════
+         ANNOUNCEMENT BANNER (Firebase-driven)
+    ═══════════════════════════════════════ -->
+    <div class="announce-banner hidden" id="announce-banner">
+      <span class="announce-emoji" id="announce-emoji">📢</span>
+      <span class="announce-text"  id="announce-text">Announcement</span>
+      <button class="announce-close" id="announce-close" aria-label="Dismiss">✕</button>
+    </div>
+
+    <!-- BOTTOM TAB BAR -->
+    <nav class="tab-bar">
+      <button class="tab-btn active" data-tab="home" id="tab-home">
+        <span class="tab-icon">🃏</span>
+        <span class="tab-label">Cards</span>
+      </button>
+      <button class="tab-btn" data-tab="saved" id="tab-saved">
+        <span class="tab-icon">🔖</span>
+        <span class="tab-label">Saved</span>
+        <span class="tab-badge hidden" id="saved-badge">0</span>
+      </button>
+      <button class="tab-btn" data-tab="progress" id="tab-progress">
+        <span class="tab-icon">📊</span>
+        <span class="tab-label">Progress</span>
+      </button>
+      <button class="tab-btn" data-tab="history" id="tab-history">
+        <span class="tab-icon">🕐</span>
+        <span class="tab-label">History</span>
+      </button>
+      <button class="tab-btn update-tab-btn" style="display:none">
+        <span class="tab-icon update-icon">🔄</span>
+        <span class="tab-label">Update</span>
+      </button>
+    </nav>
+
+    <!-- ═══════════════════
+         TAB: HOME (CARDS)
+    ════════════════════ -->
+    <section class="tab-view active" id="view-home">
+
+      <!-- ── SUBJECT PICKER (shown first) ── -->
+      <div id="subject-picker">
+        <div class="subject-header">
+          <h2 class="subject-title">Choose Mode To Study</h2>
+          <button class="search-icon-btn" id="btn-open-search" aria-label="Search questions">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- ── MODE TOGGLE ── -->
+        <div class="mode-toggle-row">
+          <button class="mode-toggle-btn active mode-btn-blink" id="mode-btn-swipe">
+            <span class="mode-btn-icon">🃏</span>
+            <span class="mode-btn-label">Swipe Mode</span>
+          </button>
+          <button class="mode-toggle-btn mode-btn-blink" id="mode-btn-cram">
+            <span class="mode-btn-icon">📋</span>
+            <span class="mode-btn-label">Cram Mode</span>
+          </button>
+        </div>
+
+        <!-- ── SUNDAY MEGA TEST BANNER (home screen) ── -->
+        <div id="sunday-mega-banner" class="sunday-mega-banner hidden">
+          <!-- Populated by _renderSundayMegaBanner() in app.js -->
+        </div>
+
+        <!-- ── MOCK TESTS BUTTON ── -->
+        <div class="mock-banner-container">
+          <button id="btn-open-mock-list" class="mock-cta-btn">
+            <span class="mock-icon">📝</span>
+            <div class="mock-text">
+              <strong>Mock Tests</strong>
+              <span>Practice with full MCQ tests · Negative marking</span>
+            </div>
+            <span class="mock-arrow">→</span>
+          </button>
+        </div>
+
+        <div class="subject-grid" id="subject-grid">
+          <!-- Populated by JS from sheet categories -->
+        </div>
+      </div>
+
+      <!-- ── SUBCATEGORY PICKER ── -->
+      <div id="subcategory-picker" class="hidden">
+        <div class="subject-header subcategory-header">
+          <button class="subcat-back-btn" id="btn-subcat-back">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="subcat-header-text">
+            <h2 class="subject-title" id="subcat-title">Subcategories</h2>
+            <span class="subcat-parent-label" id="subcat-parent-label"></span>
+          </div>
+        </div>
+        <div class="subject-grid" id="subcategory-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- ── MOCK CATEGORY LIST ── -->
+      <div id="mock-category-view" class="hidden">
+        <div class="mock-list-header">
+          <button class="mock-back-btn" id="btn-mock-cat-back">← Back</button>
+          <h2 class="mock-list-title">Mock Tests</h2>
+          <span class="mock-list-sub" id="mock-cat-sub">Choose a category</span>
+        </div>
+        <div class="mock-test-list" id="mock-category-list">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- ── MOCK TEST LIST ── -->
+      <div id="mock-list-view" class="hidden">
+        <div class="mock-list-header">
+          <button class="mock-back-btn" id="btn-mock-list-back">← Back</button>
+          <h2 class="mock-list-title">Mock Tests</h2>
+          <span class="mock-list-sub" id="mock-list-sub">Loading…</span>
+        </div>
+        <div class="mock-test-list" id="mock-test-list">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- ── MOCK ARENA ── -->
+      <div id="mock-arena" class="hidden">
+        <!-- ── HEADER ROW: Quit | Progress | Timer | Test name ── -->
+        <div class="mock-header">
+          <button id="btn-mock-exit" class="mock-exit-btn">✕ Quit</button>
+          <span id="mock-progress" class="mock-progress-label">Q 1 / 10</span>
+          <!-- FEATURE 4: 40-minute countdown timer -->
+          <span id="mock-arena-timer" class="mock-arena-timer">40:00</span>
+          <span id="mock-test-label" class="mock-test-name-label">Test 1</span>
+        </div>
+
+        <!-- FEATURE 1+2: Question bubble navigator — scrollable row of numbered circles -->
+        <div class="mock-bubble-wrap" id="mock-bubble-wrap">
+          <div class="mock-bubble-row" id="mock-bubble-row">
+            <!-- Populated by _renderQBubbles() -->
+          </div>
+        </div>
+
+        <!-- SCROLLABLE AREA: question + options (fills remaining space between bubbles and bottom bar) -->
+        <div class="mock-question-scroll" id="mock-question-scroll">
+          <!-- Question box -->
+          <div class="mock-question-box">
+            <h3 id="mock-q-text">Loading question…</h3>
+          </div>
+
+          <!-- MCQ options -->
+          <div class="mock-options" id="mock-options">
+            <button class="mock-opt" data-opt="a" id="opt-a"></button>
+            <button class="mock-opt" data-opt="b" id="opt-b"></button>
+            <button class="mock-opt" data-opt="c" id="opt-c"></button>
+            <button class="mock-opt" data-opt="d" id="opt-d"></button>
+            <button class="mock-opt" data-opt="e" id="opt-e"></button>
+          </div>
+        </div>
+
+        <!-- FEATURE 1: Prev / Next navigation + FEATURE 2: Review + Skip + FEATURE 4: Submit -->
+        <div class="mock-bottom-bar">
+          <!-- Row 1 (top): Prev / Next navigation -->
+          <div class="mock-nav-row">
+            <button id="btn-mock-prev" class="mock-nav-btn" disabled>‹ Prev</button>
+            <span class="mock-nav-hint" id="mock-nav-hint">Tap an option to answer</span>
+            <button id="btn-mock-next" class="mock-nav-btn">Next ›</button>
+          </div>
+          <!-- Row 2 (bottom): Skip | Review | Submit -->
+          <div class="mock-action-row">
+            <button id="btn-mock-skip" class="mock-skip-btn">⏭ Skip</button>
+            <button id="btn-mock-review" class="mock-review-btn">🟡 Review</button>
+            <button id="btn-mock-submit" class="mock-submit-btn">Submit ✓</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MOCK RESULTS ── -->
+      <div id="mock-results" class="hidden">
+        <div class="mock-results-inner">
+          <div class="mock-result-hero">
+            <div class="mock-result-icon">📊</div>
+            <h2 class="mock-result-title">Mock Completed!</h2>
+            <p class="mock-result-testname" id="mock-result-testname"></p>
+          </div>
+          <div class="score-card">
+            <div class="score-block">
+              <span class="score-val" id="mock-final-score">0.00</span>
+              <span class="score-label">Final Score</span>
+            </div>
+            <div class="score-breakdown">
+              <div class="score-row correct-row">
+                <span class="score-dot dot-green"></span>
+                <span class="score-row-label">Correct</span>
+                <span class="score-row-val green" id="count-correct">0</span>
+                <span class="score-row-pts green">+<span id="pts-correct">0.00</span></span>
+              </div>
+              <div class="score-row wrong-row">
+                <span class="score-dot dot-red"></span>
+                <span class="score-row-label">Wrong</span>
+                <span class="score-row-val red" id="count-wrong">0</span>
+                <span class="score-row-pts red">−<span id="pts-wrong">0.00</span></span>
+              </div>
+              <div class="score-row skip-row">
+                <span class="score-dot dot-amber"></span>
+                <span class="score-row-label">Skipped</span>
+                <span class="score-row-val" id="count-skip">0</span>
+                <span class="score-row-pts muted">±0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="review-filters">
+            <button class="rev-btn active" data-filter="all">All</button>
+            <button class="rev-btn" data-filter="correct">✓ Correct</button>
+            <button class="rev-btn" data-filter="wrong">✕ Wrong</button>
+            <button class="rev-btn" data-filter="skipped">⏭ Skipped</button>
+          </div>
+
+          <div id="mock-review-list" class="mock-review-list"></div>
+
+          <button id="btn-mock-home" class="mock-home-btn">← Back to Test List</button>
+        </div>
+      </div>
+
+      <!-- ── SPRINT RESULT SCREEN ── -->
+      <div class="sprint-result hidden" id="sprint-result">
+
+        <!-- Sticky header: accuracy + stats + actions -->
+        <div class="sprint-result-header">
+          <div class="sprint-result-hero">
+            <span class="sprint-result-icon">⚡</span>
+            <div>
+              <div class="sprint-result-title">Sprint Complete!</div>
+              <div class="sprint-result-pct-row">
+                <span class="sprint-result-pct" id="sprint-result-pct">0%</span>
+                <span class="sprint-result-pct-label">Accuracy</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sprint-result-stats">
+            <div class="sprint-rs">
+              <div class="sprint-rs-val green" id="sprint-rs-known">0</div>
+              <div class="sprint-rs-label">Known ✓</div>
+            </div>
+            <div class="sprint-rs">
+              <div class="sprint-rs-val red" id="sprint-rs-unknown">0</div>
+              <div class="sprint-rs-label">Unknown ✗</div>
+            </div>
+            <div class="sprint-rs">
+              <div class="sprint-rs-val" id="sprint-rs-total">0</div>
+              <div class="sprint-rs-label">Total</div>
+            </div>
+          </div>
+
+          <div class="sprint-result-actions">
+            <button class="sprint-again-btn" id="btn-sprint-again">⚡ Sprint Again</button>
+            <button class="sprint-home-btn" id="btn-sprint-home">← Back to Subjects</button>
+          </div>
+        </div>
+
+        <!-- Scrollable review body -->
+        <div class="sprint-review-body">
+
+          <!-- Unknown section (shown first — most important to study) -->
+          <div class="sprint-review-section sprint-review-section-unknown">
+            <div class="sprint-review-section-title" id="sprint-unknown-header">✗ Don't Know — 0 cards</div>
+            <div class="sprint-review-list" id="sprint-unknown-list"></div>
+          </div>
+
+          <!-- Known section -->
+          <div class="sprint-review-section sprint-review-section-known">
+            <div class="sprint-review-section-title" id="sprint-known-header">✓ Known — 0 cards</div>
+            <div class="sprint-review-list" id="sprint-known-list"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── CARD AREA (shown after subject selected) ── -->
+      <div id="card-area" class="hidden">
+
+        <!-- Top bar: back button + subject name + card count -->
+        <div class="card-topbar">
+          <button class="back-btn" id="btn-back-subjects">
+            <span class="back-arrow">←</span>
+            <span class="back-label">Subjects</span>
+          </button>
+          <div class="card-topbar-center">
+            <span class="active-subject-name" id="active-subject-name">—</span>
+          </div>
+          <span class="daily-count" id="daily-count">Card 1</span>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="daily-strip slim">
+          <div class="daily-progress-bar">
+            <div class="daily-progress-fill" id="daily-progress-fill" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- ── CRAM VIEW: shown instead of card arena in Cram Mode ── -->
+        <div class="cram-view hidden" id="cram-view"></div>
+
+        <!-- SPRINT HUD (timer + score — shown only in sprint mode) -->
+        <div class="sprint-hud hidden" id="sprint-hud">
+          <div class="sprint-hud-timer" id="sprint-hud-timer">10:00</div>
+          <div class="sprint-hud-divider"></div>
+          <div class="sprint-hud-count" id="sprint-hud-count">0 / 50</div>
+          <div class="sprint-hud-divider"></div>
+          <div class="sprint-hud-scores">
+            <span class="sprint-hud-known" id="sprint-hud-known">0 ✓</span>
+            <span class="sprint-hud-unknown" id="sprint-hud-unknown">0 ✗</span>
+          </div>
+        </div>
+
+        <!-- CARD STACK -->
+        <div class="card-arena" id="card-arena">
+          <!-- Back / Forward nav arrows -->
+          <button class="arena-arrow arena-arrow-left hidden" id="btn-card-back" aria-label="Previous card">‹</button>
+          <button class="arena-arrow arena-arrow-right hidden" id="btn-card-fwd"  aria-label="Next card">›</button>
+
+          <div class="card ghost-card ghost-2" id="ghost-card-2"></div>
+          <div class="card ghost-card ghost-1" id="ghost-card-1"></div>
+
+          <div class="card active-card" id="active-card">
+            <div class="card-inner" id="card-inner">
+
+              <!-- FRONT -->
+              <div class="card-face card-front" id="card-front">
+                <div class="card-number" id="card-number">Q1</div>
+                <div class="card-question" id="card-question"><span class="card-text-inner" id="card-question-inner">Loading…</span></div>
+              </div>
+
+              <!-- BACK -->
+              <div class="card-face card-back" id="card-back">
+                <div class="back-label">Answer</div>
+                <div class="card-answer" id="card-answer"><span class="card-text-inner" id="card-answer-inner"></span></div>
+                <div class="card-question-repeat" id="card-question-repeat"><span class="card-text-inner" id="card-question-repeat-inner"></span></div>
+              </div>
+
+            </div>
+
+            <!-- Overlays -->
+            <div class="swipe-overlay swipe-right" id="overlay-right"></div>
+            <div class="swipe-overlay swipe-left"  id="overlay-left"></div>
+            <div class="swipe-overlay swipe-up"    id="overlay-up"></div>
+            <div class="swipe-overlay swipe-down"  id="overlay-down"></div>
+          </div>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div class="action-row" id="action-row">
+          <button class="action-btn skip-btn" id="btn-skip">
+            <span class="action-icon">⏭</span>
+            <span class="action-label">Skip</span>
+          </button>
+          <button class="action-btn flip-btn" id="btn-flip">
+            <span class="action-icon">🔄</span>
+            <span class="action-label">Reveal</span>
+          </button>
+          <button class="action-btn save-btn" id="btn-save">
+            <span class="action-icon">🔖</span>
+            <span class="action-label">Save</span>
+          </button>
+          <button class="action-btn share-btn" id="btn-next">
+            <span class="action-icon">↗</span>
+            <span class="action-label">Share</span>
+          </button>
+        </div>
+
+        <!-- SPRINT ACTION BUTTONS (shown only in sprint mode) -->
+        <div class="sprint-action-row hidden" id="sprint-action-row">
+          <button class="sprint-action-btn sprint-unknown-btn" id="btn-sprint-unknown">
+            <span class="sprint-action-icon">✗</span>
+            <span class="sprint-action-label">Don't Know</span>
+          </button>
+          <button class="sprint-action-btn sprint-known-btn" id="btn-sprint-known">
+            <span class="sprint-action-icon">✓</span>
+            <span class="sprint-action-label">Know It!</span>
+          </button>
+        </div>
+
+        <!-- SWIPE GUIDE -->
+        <div class="swipe-guide" id="swipe-guide">
+          <div class="guide-row"><span class="guide-arrow">↓</span><span class="guide-text">Reveal answer</span></div>
+          <div class="guide-row"><span class="guide-arrow">↑ ← →</span><span class="guide-text">Skip</span></div>
+        </div>
+
+      </div><!-- end #card-area -->
+
+    </section>
+
+    <!-- ═══════════════════════
+         TAB: SAVED CARDS
+    ════════════════════════ -->
+    <section class="tab-view" id="view-saved">
+      <div class="page-header">
+        <h2 class="page-title">Saved Cards</h2>
+        <span class="page-subtitle" id="saved-count-label">0 cards</span>
+      </div>
+
+      <!-- ── QUIZ SAVED BUTTON ── -->
+      <button class="quiz-saved-btn" id="btn-quiz-saved">
+        <span class="quiz-saved-left">
+          <span class="quiz-saved-icon">🎯</span>
+          <span>Quiz My Saved Cards</span>
+        </span>
+        <span class="quiz-saved-arrow">→</span>
+      </button>
+
+      <!-- ── WHATSAPP DUMP BUTTON ── -->
+      <button class="whatsapp-dump-btn hidden" id="btn-whatsapp-dump" onclick="exportToWhatsApp()">
+        <span class="whatsapp-dump-left">
+          <span class="whatsapp-dump-icon">🚀</span>
+          <span>Export to WhatsApp Dump</span>
+        </span>
+        <span class="whatsapp-dump-arrow">→</span>
+      </button>
+
+      <!-- ── SEARCH BAR ── -->
+      <div class="tab-search-wrap" id="saved-search-wrap">
+        <div class="tab-search-inner">
+          <span class="tab-search-icon">🔍</span>
+          <input class="tab-search-input" id="saved-search" type="text"
+                 placeholder="Search saved cards…" autocomplete="off" autocorrect="off" />
+          <button class="tab-search-clear hidden" id="saved-search-clear" aria-label="Clear">✕</button>
+        </div>
+      </div>
+
+      <div class="saved-list" id="saved-list">
+        <!-- Populated by JS -->
+      </div>
+
+      <div class="empty-state hidden" id="saved-empty">
+        <div class="empty-icon">🔖</div>
+        <p class="empty-title">No saved cards yet</p>
+        <p class="empty-sub">Swipe up on a card to save it here</p>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════
+         TAB: HISTORY
+    ════════════════════════ -->
+    <section class="tab-view" id="view-history">
+      <div class="page-header">
+        <h2 class="page-title">History</h2>
+        <span class="page-subtitle" id="history-count-label">0 cards</span>
+      </div>
+
+      <!-- ── SEARCH BAR ── -->
+      <div class="tab-search-wrap" id="history-search-wrap">
+        <div class="tab-search-inner">
+          <span class="tab-search-icon">🔍</span>
+          <input class="tab-search-input" id="history-search" type="text"
+                 placeholder="Search history…" autocomplete="off" autocorrect="off" />
+          <button class="tab-search-clear hidden" id="history-search-clear" aria-label="Clear">✕</button>
+        </div>
+      </div>
+
+      <!-- Filter pills -->
+      <div class="hist-filter-row">
+        <button class="hist-filter-btn active" data-filter="all">All</button>
+        <button class="hist-filter-btn" data-filter="done">✓ Done</button>
+        <button class="hist-filter-btn" data-filter="skipped">⏭ Skipped</button>
+        <button class="hist-filter-btn" data-filter="saved">🔖 Saved</button>
+      </div>
+
+      <div class="hist-list" id="history-list"></div>
+
+      <div class="empty-state hidden" id="history-empty">
+        <div class="empty-icon">🕐</div>
+        <p class="empty-title">No history yet</p>
+        <p class="empty-sub">Cards you swipe will appear here</p>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════
+         TAB: PROGRESS
+    ════════════════════════ -->
+    <section class="tab-view" id="view-progress">
+
+      <!-- Header -->
+      <div class="page-header">
+        <h2 class="page-title">My Progress</h2>
+        <span class="page-subtitle" id="today-date-label">—</span>
+      </div>
+
+      <!-- ── USER COUNT ── -->
+      <div class="user-count-banner" id="user-count-banner">
+        <div class="uc-stat">
+          <span class="uc-icon">🟢</span>
+          <div class="uc-info">
+            <span class="uc-val" id="online-count-val">—</span>
+            <span class="uc-lbl">Studying Now</span>
+          </div>
+        </div>
+        <div class="uc-divider"></div>
+        <div class="uc-stat">
+          <span class="uc-icon">👥</span>
+          <div class="uc-info">
+            <span class="uc-val" id="user-count-val">—</span>
+            <span class="uc-lbl">Total Learners</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats grid -->
+      <div class="stats-grid">
+        <div class="stat-card stat-streak">
+          <div class="stat-card-accent"></div>
+          <div class="stat-icon">🔥</div>
+          <div class="stat-val" id="stat-streak">0</div>
+          <div class="stat-label">Day Streak</div>
+        </div>
+        <div class="stat-card stat-total">
+          <div class="stat-card-accent"></div>
+          <div class="stat-icon">📚</div>
+          <div class="stat-val" id="stat-total">0</div>
+          <div class="stat-label">Total Mastered</div>
+        </div>
+        <div class="stat-card stat-saved">
+          <div class="stat-card-accent"></div>
+          <div class="stat-icon">🔖</div>
+          <div class="stat-val" id="stat-saved">0</div>
+          <div class="stat-label">Saved</div>
+        </div>
+        <div class="stat-card stat-days">
+          <div class="stat-card-accent"></div>
+          <div class="stat-icon">⚡</div>
+          <div class="stat-val" id="stat-days">0</div>
+          <div class="stat-label">Days Active</div>
+        </div>
+      </div>
+
+      <!-- ── DAILY TARGET SETTER ── -->
+      <div class="daily-target-section">
+        <div class="daily-target-header">
+          <h3 class="section-title">Daily Target</h3>
+          <span class="daily-target-today" id="daily-target-today-count">0 done today</span>
+        </div>
+        <div class="daily-target-ring-row">
+          <div class="daily-target-ring-wrap">
+            <svg class="daily-target-svg" viewBox="0 0 80 80">
+              <circle class="dtr-track" cx="40" cy="40" r="34"/>
+              <circle class="dtr-fill"  cx="40" cy="40" r="34" id="dtr-fill-circle"/>
+            </svg>
+            <div class="daily-target-ring-inner">
+              <span class="dtr-pct" id="dtr-pct">0%</span>
+            </div>
+          </div>
+          <div class="daily-target-info">
+            <div class="dtr-goal-row">
+              <span class="dtr-goal-label">Today's goal</span>
+              <span class="dtr-goal-val" id="dtr-goal-val">25 cards</span>
+            </div>
+            <div class="dtr-progress-row">
+              <div class="dtr-bar-track">
+                <div class="dtr-bar-fill" id="dtr-bar-fill" style="width:0%"></div>
+              </div>
+            </div>
+            <div class="dtr-status" id="dtr-status">Keep going! 💪</div>
+          </div>
+        </div>
+        <div class="dtr-presets">
+          <button class="dtr-preset-btn" data-target="10">10</button>
+          <button class="dtr-preset-btn" data-target="25">25</button>
+          <button class="dtr-preset-btn" data-target="50">50</button>
+          <button class="dtr-preset-btn" data-target="100">100</button>
+          <button class="dtr-preset-btn dtr-custom-btn" id="dtr-custom-btn">Custom</button>
+        </div>
+        <div class="dtr-custom-row hidden" id="dtr-custom-row">
+          <input class="dtr-custom-input" id="dtr-custom-input"
+                 type="number" min="1" max="9999" placeholder="Enter target…" />
+          <button class="dtr-set-btn" id="dtr-set-btn">Set</button>
+        </div>
+      </div>
+
+      <!-- Category breakdown -->
+      <div class="category-section">
+        <h3 class="section-title">By Category</h3>
+        <div class="category-bars" id="category-bars"></div>
+      </div>
+
+      <!-- Actions -->
+      <div class="reset-section">
+        <button class="update-progress-btn" id="tab-update">
+          <span class="update-progress-icon" id="update-icon">🔄</span>
+          <span>Refresh App &amp; Data</span>
+        </button>
+        <p class="update-progress-warning">Fetches latest questions &amp; app files</p>
+        <button class="reset-btn" id="btn-reset">↺ Reset Progress</button>
+        <p class="reset-warning">This will clear all local data</p>
+      </div>
+
+    </section>
+
+  </div><!-- end #app -->
+
+  <!-- ═══════════════════════════════════════════════
+       SEARCH OVERLAY
+  ════════════════════════════════════════════════ -->
+  <div class="search-overlay hidden" id="search-overlay">
+    <div class="search-panel">
+      <div class="search-bar-row">
+        <button class="search-back-btn" id="btn-close-search" aria-label="Close search">←</button>
+        <div class="search-input-wrap">
+          <svg class="search-input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input class="search-input" id="search-input" type="text"
+                 placeholder="Search questions, topics, keywords…"
+                 autocomplete="off" autocorrect="off" autocapitalize="off" />
+          <button class="search-clear-btn hidden" id="btn-clear-search" aria-label="Clear">✕</button>
+        </div>
+      </div>
+      <div class="search-meta" id="search-meta"></div>
+      <div class="search-results" id="search-results">
+        <div class="search-empty-state" id="search-empty-state">
+          <div class="search-empty-icon">🔍</div>
+          <p class="search-empty-title">Search all questions</p>
+          <p class="search-empty-sub">Type a keyword, topic or answer to find matching cards</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       CHANNEL JOIN POPUP
+  ════════════════════════════════════════════════ -->
+  <div class="channel-popup-overlay hidden" id="channel-popup-overlay">
+    <div class="channel-popup" id="channel-popup">
+      <button class="channel-popup-close" id="channel-popup-close" aria-label="Close">✕</button>
+
+      <div class="channel-popup-icon">📢</div>
+      <h2 class="channel-popup-title">Join Our Group!</h2>
+      <p class="channel-popup-msg">
+        Get daily updates, new question sets, and announcements on our official Telegram Group.
+      </p>
+
+      <a class="channel-join-btn" id="channel-join-btn"
+         href="https://t.me/AGRIMETS_OFFICIAL" target="_blank">
+        <span>Join Group</span>
+        <span class="channel-btn-arrow">→</span>
+      </a>
+
+      <button class="channel-skip-btn" id="channel-skip-btn">
+        Maybe later
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       GLOSSARY BOTTOM SHEET
+  ════════════════════════════════════════════════ -->
+  <div class="glossary-overlay hidden" id="glossary-overlay">
+    <div class="glossary-sheet" id="glossary-sheet">
+      <div class="glossary-sheet-handle"></div>
+      <div class="glossary-sheet-head">
+        <div class="glossary-badge">📖 Glossary</div>
+        <button class="glossary-close" id="glossary-close" aria-label="Close">✕</button>
+      </div>
+      <div class="glossary-term-title" id="glossary-term-title"></div>
+      <p class="glossary-definition" id="glossary-definition"></p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       TOAST NOTIFICATION
+  ════════════════════════════════════════════════ -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ═══════════════════════════════════════════════
+       AD BANNER PLACEHOLDER (monetization ready)
+  ════════════════════════════════════════════════ -->
+  <div class="ad-banner hidden" id="ad-banner">
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-slot" id="ad-slot">
+      <!-- Insert ad code here -->
+    </div>
+    <button class="ad-close" id="ad-close">✕</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       SHARE POPUP  (every 250 cards)
+  ════════════════════════════════════════════════ -->
+  <div class="share-popup-overlay hidden" id="share-popup-overlay">
+    <div class="share-popup">
+      <button class="share-popup-close" id="share-popup-close">✕</button>
+      <div class="share-popup-icon">🎉</div>
+      <h2 class="share-popup-title">200 Cards Done!</h2>
+      <p class="share-popup-msg">You're on fire! Share AGRIMETS with friends and help them ace their exams too.</p>
+      <button class="share-main-btn" id="share-main-btn">
+        <span>📤 Share with Friends</span>
+      </button>
+      <button class="share-skip-btn" id="share-skip-btn">Continue studying</button>
+    </div>
+  </div>
+  <!-- ═══════════════════════════════════════════════
+       DAILY TARGET CELEBRATION OVERLAY
+       Created dynamically by _showDailyTargetCelebration()
+  ════════════════════════════════════════════════ -->
+
+  <script>
+    (function() {
+      var v = window._cbv || Date.now();
+      var scripts = ['telegram.js', 'swipe.js', 'app.js'];
+      var i = 0;
+      function loadNext() {
+        if (i >= scripts.length) return;
+        var s = document.createElement('script');
+        s.src = scripts[i++] + '?v=' + v;
+        s.onload = loadNext;
+        s.onerror = function() { console.warn('[SW] script failed: ' + s.src); loadNext(); };
+        document.body.appendChild(s);
+      }
+      loadNext();
+    })();
+  </script>
+  <!-- ═══════════════════════════════════════════════
+       LEADERBOARD POPUP
+  ════════════════════════════════════════════════ -->
+  <div class="lb-overlay hidden" id="lb-overlay">
+    <div class="lb-sheet" id="lb-sheet">
+      <div class="lb-handle"></div>
+      <div class="lb-head">
+        <div class="lb-head-left">
+          <div class="lb-title" id="lb-title">Leaderboard</div>
+          <div class="lb-sub" id="lb-sub">Top 10 scores</div>
+        </div>
+        <button class="lb-close" id="lb-close">✕</button>
+      </div>
+      <!-- Your score highlight -->
+      <div class="lb-my-score" id="lb-my-score"></div>
+      <!-- Top 10 list -->
+      <div class="lb-list" id="lb-list">
+        <div class="lb-loading">⏳ Loading scores…</div>
+      </div>
+      <button class="lb-continue-btn" id="lb-continue-btn">Continue →</button>
+    </div>
+  </div>
+  <!-- ═══════════════════════════════════════════════
+       FEATURE 3: POST-TEST GROUP JOIN POPUP
+       Shown after every mock test completes.
+  ════════════════════════════════════════════════ -->
+  <div class="post-test-popup-overlay hidden" id="post-test-popup-overlay">
+    <div class="post-test-popup" id="post-test-popup">
+      <button class="post-test-popup-close" id="post-test-popup-close" aria-label="Close">✕</button>
+      <div class="post-test-popup-icon">📢</div>
+      <h2 class="post-test-popup-title">Great Job! 🎉</h2>
+      <p class="post-test-popup-msg">
+        Join our official Telegram Group for daily updates, new question sets, answer keys, and exam announcements!
+      </p>
+      <a class="post-test-join-btn" id="post-test-join-btn"
+         href="https://t.me/AGRIMETS_OFFICIAL" target="_blank">
+        <span>📲 Join AGRIMETS Group</span>
+        <span class="post-test-btn-arrow">→</span>
+      </a>
+      <button class="post-test-skip-btn" id="post-test-skip-btn">
+        Maybe later
+      </button>
+    </div>
+  </div>
+
+</body>
+</html>
