@@ -2243,7 +2243,7 @@ function _initButtons() {
     const q = State.dailyCards[State.currentIndex];
     if (!q) return;
     TG.Haptic.medium();
-    _shareCardAsImage(q);   // ← image share (falls back to text if needed)
+    _shareCard(q);
   });
 
   // ── Sprint: button-row Know It / Don't Know ────────────────
@@ -5090,14 +5090,32 @@ async function _fetchAnnouncements() {
     if (!data || typeof data !== 'object') return;
 
     const now = Date.now();
-    const seen = new Set(ls_get(LS.ANN_SEEN, []));
+    // seenMap: { [id]: seenAt_timestamp } — object so we can check timing per entry
+    let seenMap = ls_get(LS.ANN_SEEN, {});
+    // Migrate legacy array format (old code stored plain array of IDs)
+    if (Array.isArray(seenMap)) {
+      const migrated = {};
+      seenMap.forEach(id => { migrated[id] = now; });
+      seenMap = migrated;
+      ls_set(LS.ANN_SEEN, seenMap);
+    }
+
     let latest = null;
 
-    // Pick the most recent active, unseen announcement
     Object.entries(data).forEach(([id, ann]) => {
       if (!ann || !ann.active) return;
+      // Skip if the announcement's own expiry has passed
       if (ann.expiresAt && ann.expiresAt < now) return;
-      if (seen.has(id)) return;
+
+      // User-seen check: don't show again within the announcement's active window
+      const seenAt = seenMap[id];
+      if (seenAt) {
+        // Never-expiring announcement → never show again once seen
+        if (!ann.expiresAt) return;
+        // Still within expiry window since user saw it → skip
+        if (seenAt < ann.expiresAt) return;
+      }
+
       if (!latest || ann.createdAt > latest.createdAt) {
         latest = { ...ann, id };
       }
@@ -5139,10 +5157,11 @@ function _showAnnouncementBanner(ann) {
   requestAnimationFrame(() => overlay.classList.add('ann-popup-open'));
 
   function _close() {
-    // Mark as seen
-    const seen = new Set(ls_get(LS.ANN_SEEN, []));
-    seen.add(ann.id);
-    ls_set(LS.ANN_SEEN, [...seen]);
+    // Mark as seen with timestamp so interval logic works correctly
+    let seenMap = ls_get(LS.ANN_SEEN, {});
+    if (Array.isArray(seenMap)) seenMap = {};
+    seenMap[ann.id] = Date.now();
+    ls_set(LS.ANN_SEEN, seenMap);
 
     overlay.classList.remove('ann-popup-open');
     overlay.classList.add('ann-popup-closing');
