@@ -5326,6 +5326,62 @@ body {
   background: #ffffff;
 }
 
+/* ── Light theme: card text colours ─────────────────────────── */
+[data-theme="light"] .card-front {
+  background: linear-gradient(145deg, #f0f4ff 0%, #ffffff 100%);
+}
+[data-theme="light"] .card-back {
+  background: linear-gradient(145deg, #f0fff6 0%, #ffffff 100%);
+}
+[data-theme="light"] .card-question {
+  color: #0d0e1a;
+  text-shadow: none;
+}
+[data-theme="light"] .card-answer {
+  color: #007a3d;
+  text-shadow: none;
+}
+[data-theme="light"] .card-number {
+  color: var(--cyan);
+}
+[data-theme="light"] .back-label {
+  color: var(--green);
+}
+[data-theme="light"] .card-question-repeat {
+  color: var(--text-secondary);
+  border-top-color: rgba(0,122,61,0.15);
+}
+[data-theme="light"] .card-hint {
+  border-top-color: rgba(0,80,200,0.10);
+  color: var(--text-muted);
+}
+
+/* ── Light theme: cram mode ─────────────────────────────────── */
+[data-theme="light"] .cram-item {
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(0,40,120,0.06);
+}
+[data-theme="light"] .cram-item.cram-revealed {
+  border-color: rgba(0,122,61,0.30);
+  background: linear-gradient(135deg, #ffffff 0%, rgba(0,200,100,0.04) 100%);
+}
+[data-theme="light"] .cram-question {
+  color: #0d0e1a;
+}
+[data-theme="light"] .cram-category {
+  color: var(--text-muted);
+}
+/* Hidden answer mask — must be visible on white background */
+[data-theme="light"] .cram-answer {
+  color: transparent;
+  background: rgba(0,0,0,0.07);
+}
+[data-theme="light"] .cram-item.cram-revealed .cram-answer {
+  color: #007a3d;
+  background: rgba(0,160,80,0.08);
+  text-shadow: none;
+}
+
 [data-theme="light"] .search-overlay .search-panel,
 [data-theme="light"] .glossary-sheet,
 [data-theme="light"] .lb-sheet {
