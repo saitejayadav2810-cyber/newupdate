@@ -5111,27 +5111,47 @@ async function _fetchAnnouncements() {
 }
 
 function _showAnnouncementBanner(ann) {
-  const banner   = document.getElementById('announce-banner');
-  const emojiEl  = document.getElementById('announce-emoji');
-  const textEl   = document.getElementById('announce-text');
-  const closeBtn = document.getElementById('announce-close');
-  if (!banner) return;
+  // ── Build center popup (same style as daily-target celebration) ──
+  const existing = document.getElementById('ann-popup-overlay');
+  if (existing) existing.remove();
 
-  if (emojiEl) emojiEl.textContent = ann.emoji || '📢';
-  if (textEl)  textEl.textContent  = ann.message || '';
+  const overlay = document.createElement('div');
+  overlay.id        = 'ann-popup-overlay';
+  overlay.className = 'ann-popup-overlay';
 
-  // Style by type
-  banner.className = 'announce-banner announce-' + (ann.type || 'info');
-  banner.classList.remove('hidden');
+  // Pick accent colour by type
+  const colours = {
+    info:    { border: 'rgba(0,180,255,0.45)',  glow: 'rgba(0,180,255,0.18)',  icon: '#00b4d8' },
+    success: { border: 'rgba(0,230,118,0.45)',  glow: 'rgba(0,230,118,0.18)',  icon: '#00e676' },
+    warning: { border: 'rgba(255,171,0,0.45)',  glow: 'rgba(255,171,0,0.18)',  icon: '#ffab00' },
+    danger:  { border: 'rgba(255,82,82,0.45)',  glow: 'rgba(255,82,82,0.18)',  icon: '#ff5252' },
+  };
+  const c = colours[ann.type || 'info'];
 
-  closeBtn?.addEventListener('click', () => {
+  overlay.innerHTML = `
+    <div class="ann-popup-card" style="border-color:${c.border};box-shadow:0 0 40px ${c.glow},0 24px 60px rgba(0,0,0,0.6),0 0 0 1px ${c.border};">
+      <div class="ann-popup-emoji">${ann.emoji || '📢'}</div>
+      <div class="ann-popup-msg">${_escHtml ? _escHtml(ann.message || '') : (ann.message || '')}</div>
+      <button class="ann-popup-close" id="ann-popup-close-btn">Got it ✓</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('ann-popup-open'));
+
+  function _close() {
     // Mark as seen
     const seen = new Set(ls_get(LS.ANN_SEEN, []));
     seen.add(ann.id);
     ls_set(LS.ANN_SEEN, [...seen]);
-    banner.classList.add('hidden');
+
+    overlay.classList.remove('ann-popup-open');
+    overlay.classList.add('ann-popup-closing');
+    setTimeout(() => overlay.remove(), 300);
     TG.Haptic.select();
-  }, { once: true });
+  }
+
+  document.getElementById('ann-popup-close-btn')?.addEventListener('click', _close, { once: true });
+  overlay.addEventListener('click', e => { if (e.target === overlay) _close(); });
 }
 
 // ── Wait for DOM ──────────────────────────────────────────────
