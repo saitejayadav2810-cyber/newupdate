@@ -5484,28 +5484,214 @@ body {
   border-color: rgba(0,40,120,0.10);
 }
 
+/* ── Mock: Q-bubble navigator — fix all 5 states (class names match JS) ── */
 [data-theme="light"] .q-bubble {
   background: var(--surface-2);
-  border-color: var(--glass-border);
+  border-color: rgba(0,40,120,0.18);
   color: var(--text-secondary);
+  text-shadow: none;
+}
+/* Unattempted: red → visible deep red on white */
+[data-theme="light"] .q-bubble-unattempted {
+  background: #c0392b;
+  border-color: #e74c3c;
+  color: #ffffff;
+}
+/* Answered: dark green → readable */
+[data-theme="light"] .q-bubble-answered {
+  background: #1a6b35;
+  border-color: #27ae60;
+  color: #ffffff;
+}
+/* Skipped: amber — already fine on white, just ensure contrast */
+[data-theme="light"] .q-bubble-skipped {
+  background: #c27c00;
+  border-color: #e6a817;
+  color: #ffffff;
+}
+/* For Review: blue */
+[data-theme="light"] .q-bubble-review {
+  background: #1255a0;
+  border-color: #3d8ee0;
+  color: #ffffff;
+}
+/* Current: dark ring instead of white ring */
+[data-theme="light"] .q-bubble-current {
+  border-color: #0d0e1a !important;
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.18), 0 0 10px rgba(0,0,0,0.10) !important;
 }
 
-[data-theme="light"] .q-bubble.answered {
-  background: rgba(0,80,200,0.12);
-  border-color: rgba(0,80,200,0.30);
+[data-theme="light"] .mock-nav-hint    { color: var(--text-muted); }
+[data-theme="light"] .mock-section-label { color: var(--text-muted); }
+[data-theme="light"] .mock-back-btn    { color: var(--text-secondary); }
+[data-theme="light"] .mock-arena-timer {
+  color: var(--cyan);
+  background: var(--cyan-dim);
+  border-color: rgba(0,80,200,0.25);
+}
+[data-theme="light"] .mock-arena-timer.mock-timer-urgent {
+  color: var(--red);
+  background: var(--red-dim);
+  border-color: rgba(204,34,0,0.30);
+}
+[data-theme="light"] .mock-nav-btn {
+  background: var(--surface-2);
+  border-color: var(--glass-border);
+  color: var(--text-primary);
+}
+
+/* ── Bullet text in swipe cards (was #FFFFFF hardcoded) ─────── */
+[data-theme="light"] .bullet-text {
+  color: #0d0e1a;
+}
+[data-theme="light"] .bullet-star {
+  filter: none;
+}
+[data-theme="light"] .mock-bullet-star {
+  filter: none;
+}
+
+/* ── History & Saved: answer text (was neon #00FF88) ─────────── */
+[data-theme="light"] .hist-item-answer {
+  color: #007a3d;
+  background: rgba(0,122,61,0.07);
+  border-left-color: rgba(0,122,61,0.35);
+}
+[data-theme="light"] .hist-item {
+  background: #ffffff;
+}
+[data-theme="light"] .saved-item {
+  background: #ffffff;
+}
+
+/* ── Progress tab: category bar track (rgba white invisible) ─── */
+[data-theme="light"] .cat-bar-track {
+  background: rgba(0,40,120,0.08);
+}
+
+/* ── Daily target: ring track + bar track (rgba white invisible) */
+[data-theme="light"] .dtr-track {
+  stroke: rgba(0,40,120,0.10);
+}
+[data-theme="light"] .dtr-bar-track {
+  background: rgba(0,40,120,0.08);
+}
+
+/* ── Sprint HUD divider (rgba white invisible on light bg) ────── */
+[data-theme="light"] .sprint-hud {
+  background: linear-gradient(135deg, rgba(255,171,0,0.08) 0%, rgba(255,109,0,0.05) 100%);
+  border-color: rgba(255,171,0,0.25);
+}
+[data-theme="light"] .sprint-hud-divider {
+  background: rgba(0,0,0,0.12);
+}
+
+/* ── Swipe overlays: adjust for white cards ─────────────────── */
+[data-theme="light"] .swipe-right { background: linear-gradient(135deg, rgba(0,160,80,0.20), rgba(0,160,80,0.08)); }
+[data-theme="light"] .swipe-left  { background: linear-gradient(135deg, rgba(200,0,0,0.18), rgba(200,0,0,0.07)); }
+[data-theme="light"] .swipe-up    { background: linear-gradient(135deg, rgba(0,80,200,0.18), rgba(0,80,200,0.07)); }
+[data-theme="light"] .swipe-down  { background: linear-gradient(135deg, rgba(180,130,0,0.18), rgba(180,130,0,0.07)); }
+
+/* ── Action buttons (Skip/Reveal/Save/Share) ────────────────── */
+[data-theme="light"] .action-btn {
+  background: #ffffff;
+  border-color: rgba(0,40,120,0.14);
+  color: var(--text-secondary);
+  box-shadow: 0 2px 8px rgba(0,40,120,0.07);
+}
+
+/* ── Card topbar back button + counter ──────────────────────── */
+[data-theme="light"] .back-btn {
+  background: rgba(0,80,200,0.07);
+  border-color: rgba(0,80,200,0.15);
+  color: var(--cyan);
+}
+[data-theme="light"] .daily-count {
+  color: var(--text-secondary);
+}
+[data-theme="light"] .active-subject-name {
   color: var(--cyan);
 }
 
-[data-theme="light"] .mock-nav-hint {
-  color: var(--text-muted);
+/* ── Sprint result screen ───────────────────────────────────── */
+[data-theme="light"] .sprint-result-header {
+  background: var(--surface);
+  border-bottom-color: var(--glass-border);
 }
-
-[data-theme="light"] .mock-section-label {
-  color: var(--text-muted);
+[data-theme="light"] .sprint-review-body {
+  background: var(--bg);
 }
-
-[data-theme="light"] .mock-back-btn {
+[data-theme="light"] .sprint-review-section-title {
   color: var(--text-secondary);
+}
+[data-theme="light"] .sprint-review-item {
+  background: #ffffff;
+  border-color: rgba(0,40,120,0.10);
+}
+[data-theme="light"] .sprint-rs-val {
+  color: var(--text-primary);
+}
+
+/* ── Glossary sheet ─────────────────────────────────────────── */
+[data-theme="light"] .glossary-term {
+  color: #0066aa;
+  border-bottom-color: rgba(0,102,170,0.5);
+}
+[data-theme="light"] .glossary-sheet {
+  background: #ffffff;
+}
+[data-theme="light"] .glossary-definition {
+  color: var(--text-primary);
+}
+
+/* ── Leaderboard ────────────────────────────────────────────── */
+[data-theme="light"] .lb-sheet {
+  background: #ffffff;
+}
+[data-theme="light"] .lb-row {
+  background: var(--surface-2);
+  border-color: var(--glass-border);
+}
+[data-theme="light"] .lb-my-score {
+  background: var(--cyan-dim);
+  border-color: rgba(0,80,200,0.20);
+}
+
+/* ── Toast ──────────────────────────────────────────────────── */
+[data-theme="light"] #toast {
+  background: #1a1a2e;
+  color: #e8eaf6;
+  border-color: rgba(255,255,255,0.08);
+}
+
+/* ── Search overlay ─────────────────────────────────────────── */
+[data-theme="light"] .search-overlay {
+  background: rgba(200,210,240,0.70);
+}
+[data-theme="light"] .search-panel {
+  background: #ffffff;
+}
+[data-theme="light"] .search-input-wrap {
+  background: var(--surface-2);
+  border-color: var(--glass-border);
+}
+[data-theme="light"] .search-input {
+  color: var(--text-primary);
+  background: transparent;
+}
+[data-theme="light"] .search-result-item {
+  background: #ffffff;
+  border-color: rgba(0,40,120,0.10);
+}
+
+/* ── Daily target celebration (confetti overlay is fine; card text) */
+[data-theme="light"] .dtc-card {
+  background: #ffffff;
+  color: var(--text-primary);
+}
+[data-theme="light"] .dtc-title,
+[data-theme="light"] .dtc-sub {
+  color: var(--text-primary);
 }
 
 /* Theme toggle button */
