@@ -1165,6 +1165,9 @@ function showSubjectPicker() {
   State.activeSubcategory = null;
   State.currentIndex     = 0;
 
+  // ── Always restore tab bar (hidden during mock test) ─────────
+  _showTabBar();
+
   // Always restore card arena visibility so swipe mode works next time
   DOM.cardArena?.classList.remove('hidden');
   DOM.actionRow?.classList.remove('hidden');
@@ -2962,6 +2965,10 @@ function _mockShow(id) {
    'mock-arena','mock-results'].forEach(v => {
     document.getElementById(v)?.classList.toggle('hidden', v !== id);
   });
+  // Restore tab bar when leaving arena or results
+  if (id === 'mock-category-view' || id === 'mock-list-view') {
+    _showTabBar();
+  }
   // Stop countdown when leaving category screen
   if (id !== 'mock-category-view') {
     clearInterval(MockData.countdownInterval);
@@ -3588,6 +3595,14 @@ function _renderMockTestList() {
 // ────────────────────────────────────────────────────────────
 //  RUN A TEST
 // ────────────────────────────────────────────────────────────
+// ── Tab bar hide/show for full-screen mock test ───────────────
+function _hideTabBar() {
+  document.querySelector('.tab-bar')?.classList.add('tab-hidden');
+}
+function _showTabBar() {
+  document.querySelector('.tab-bar')?.classList.remove('tab-hidden');
+}
+
 function _startMockTest(test) {
   TG.Haptic.medium();
   MockData.currentTest  = test;
@@ -3608,8 +3623,7 @@ function _startMockTest(test) {
   if (resultName) resultName.textContent = test.name;
 
   _mockShow('mock-arena');
-
-  // ── NEW: render bubble navigator ────────────────────────────
+  _hideTabBar();  // full-screen mode during test
   _renderQBubbles();
 
   // ── NEW: start 40-minute countdown timer ───────────────────
