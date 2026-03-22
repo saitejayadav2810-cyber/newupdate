@@ -2243,12 +2243,7 @@ function _initButtons() {
     const q = State.dailyCards[State.currentIndex];
     if (!q) return;
     TG.Haptic.medium();
-    // Use image share when card is flipped (answer visible), plain text otherwise
-    if (State.isFlipped) {
-      _shareCardAsImage(q);
-    } else {
-      _shareCard(q);
-    }
+    _shareCard(q);
   });
 
   // ── Sprint: button-row Know It / Don't Know ────────────────
