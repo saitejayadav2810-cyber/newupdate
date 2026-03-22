@@ -3721,7 +3721,13 @@ function _loadMockQuestion() {
 }
 
 function _handleMockAnswer(selectedText, correctText, qObj, idx) {
-  TG.Haptic.light();
+  // ── Haptic feedback: light = correct, heavy = incorrect ──────
+  const isCorrect = selectedText.trim() === (correctText || '').trim();
+  if (isCorrect) {
+    TG.Haptic.success();   // single gentle pulse — right answer
+  } else {
+    TG.Haptic.heavy();     // strong vibration — wrong answer
+  }
 
   // ── Store the selection (overwrite previous choice freely) ──
   MockData.answers[idx] = selectedText;
