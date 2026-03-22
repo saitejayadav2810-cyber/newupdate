@@ -809,8 +809,114 @@ function _flipCard() {
 }
 
 // ════════════════════════════════════════════════════════════════
-//  SWIPE HANDLERS
+//  AI ANSWER EXPLAINER  (Gemini Flash — free tier)
 // ════════════════════════════════════════════════════════════════
+
+const _explainCache = {};
+
+// ── Gemini API key — same one used in your automations scripts ──
+// Store it here or pull from a config. Free tier: 1500 req/day.
+const GEMINI_KEY = 'YOUR_GEMINI_API_KEY'; // ← paste your key here
+
+function _initExplainBtn() {
+  const btn = document.getElementById('btn-explain');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const q = State.dailyCards[State.currentIndex];
+    if (!q || !State.isFlipped) return;
+    _showExplainSheet(q);
+  });
+}
+
+async function _showExplainSheet(question) {
+  TG.Haptic.medium();
+
+  // Build sheet if not already in DOM
+  let sheet = document.getElementById('explain-sheet-overlay');
+  if (!sheet) {
+    sheet = document.createElement('div');
+    sheet.id        = 'explain-sheet-overlay';
+    sheet.className = 'explain-overlay';
+    sheet.innerHTML = `
+      <div class="explain-sheet" id="explain-sheet">
+        <div class="explain-handle"></div>
+        <div class="explain-head">
+          <span class="explain-badge">🤖 AI Explanation</span>
+          <button class="explain-close" id="explain-close">✕</button>
+        </div>
+        <div class="explain-q" id="explain-q"></div>
+        <div class="explain-body" id="explain-body"></div>
+      </div>`;
+    document.body.appendChild(sheet);
+    document.getElementById('explain-close')
+      .addEventListener('click', _closeExplainSheet);
+    sheet.addEventListener('click', e => {
+      if (e.target === sheet) _closeExplainSheet();
+    });
+  }
+
+  const bodyEl = document.getElementById('explain-body');
+  const qEl    = document.getElementById('explain-q');
+  qEl.textContent    = question.question;
+  bodyEl.innerHTML   = '<span class="explain-typing">Thinking…</span>';
+
+  // Show with animation
+  sheet.classList.add('open');
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => sheet.classList.add('visible'))
+  );
+
+  // Return cached result instantly
+  const cacheKey = question.id;
+  if (_explainCache[cacheKey]) {
+    bodyEl.textContent = _explainCache[cacheKey];
+    return;
+  }
+
+  const prompt =
+    `You are an agriculture exam tutor for Indian competitive exams (ICAR, IBPS AFO, NABARD, FCI).\n\n` +
+    `Question: ${question.question}\n` +
+    `Answer: ${question.answer}\n` +
+    `Category: ${question.category || 'Agriculture'}\n\n` +
+    `Explain in exactly 2-3 simple sentences why this is the correct answer. ` +
+    `Focus on the key fact a student must remember. Be concise and exam-focused.`;
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+      {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents:         [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 200, temperature: 0.3 },
+        }),
+      }
+    );
+
+    if (!res.ok) throw new Error(`Gemini API ${res.status}`);
+
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
+      || 'Could not generate explanation.';
+
+    bodyEl.textContent     = text;
+    _explainCache[cacheKey] = text;
+
+  } catch (err) {
+    console.warn('[Explain] API error:', err);
+    bodyEl.textContent = '⚠️ Could not load explanation. Check your connection or API key.';
+  }
+}
+
+function _closeExplainSheet() {
+  const sheet = document.getElementById('explain-sheet-overlay');
+  if (!sheet) return;
+  sheet.classList.remove('visible');
+  setTimeout(() => sheet.classList.remove('open'), 300);
+  TG.Haptic.select();
+}
+
 
 // ── Build HTML for ★ bullet-point questions ───────────────────
 // All points rendered immediately — each on its own line
@@ -4278,6 +4384,7 @@ async function boot() {
   // 6. Init tabs and buttons
   _initTabs();
   _initButtons();
+  _initExplainBtn();
   _initModeToggle();
   _initGlossarySheet();
   _initDailyTarget();
