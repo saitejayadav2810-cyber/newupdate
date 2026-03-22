@@ -3753,6 +3753,7 @@ function _finishMock() {
   if (MockData.testSubmitted) return;  // guard against double-call
   MockData.testSubmitted = true;
   clearInterval(MockData.timerInterval);
+  TG.Haptic.success();
 
   // ── Build history from stored answers ────────────────────────
   MockData.history = [];
@@ -3800,6 +3801,17 @@ function _finishMock() {
   document.querySelector('.rev-btn[data-filter="all"]')?.classList.add('active');
 
   _mockShow('mock-results');
+
+  // ── Show retry button only when there are wrong answers ──────
+  const retryBtn = document.getElementById('btn-retry-wrong');
+  if (retryBtn) {
+    if (w > 0) {
+      retryBtn.classList.remove('hidden');
+      retryBtn.textContent = `⟳ Retry ${w} Wrong Answer${w !== 1 ? 's' : ''}`;
+    } else {
+      retryBtn.classList.add('hidden');
+    }
+  }
 
   // ── Leaderboard popup ────────────────────────────────────────
   const testName = MockData.currentTest?.name || 'Mock Test';
@@ -3867,8 +3879,18 @@ function _renderMockReview(filter) {
       </div>`;
     }
 
-    div.innerHTML = `<div class="rev-q">${_escHtml(h.question)}</div>${ansHtml}`;
+    div.innerHTML = `<div class="rev-q">${_escHtml(h.question)}</div>${ansHtml}
+      <button class="rev-bookmark-btn" data-q='${JSON.stringify({id: h.question, question: h.question, answer: h.correct, category: MockData.currentTest?.name || 'Mock Test'})}'>🔖 Save</button>`;
     list.appendChild(div);
+
+    // wire bookmark button
+    div.querySelector('.rev-bookmark-btn')?.addEventListener('click', (e) => {
+      const q = JSON.parse(e.currentTarget.dataset.q);
+      q.id = 'mock_' + btoa(q.question).slice(0, 12);
+      saveCard(q);
+      e.currentTarget.textContent = '✓ Saved';
+      e.currentTarget.disabled = true;
+    });
   });
 }
 
@@ -3963,6 +3985,28 @@ function _initMockButtons() {
           TG.replaceBack(() => { showSubjectPicker(); });
         });
       }
+    });
+  });
+
+  // ── Retry wrong answers ───────────────────────────────────────
+  document.getElementById('btn-retry-wrong')?.addEventListener('click', () => {
+    const wrongQs = MockData.history
+      .filter(h => h.status === 'wrong')
+      .map(h => ({
+        question: h.question,
+        answer:   h.correct,
+        opt_a: h.opts?.a || '', opt_b: h.opts?.b || '',
+        opt_c: h.opts?.c || '', opt_d: h.opts?.d || '',
+        opt_e: h.opts?.e || '',
+        category: MockData.currentTest?.name || 'Mock Test',
+        test_no:  'Retry',
+      }));
+    if (wrongQs.length === 0) return;
+    TG.Haptic.medium();
+    _startMockTest({
+      testNo:    'Retry',
+      name:      `Retry — ${MockData.currentTest?.name || 'Wrong Answers'}`,
+      questions: wrongQs,
     });
   });
 
@@ -4283,7 +4327,8 @@ async function boot() {
   _initMockButtons();
   _initSundayMegaBanner();
   _initSearch();
-  _initTheme();           // ← NEW: dark/light toggle
+  _initTheme();
+  _initFontSize();
 
   // 7. Dismiss splash — always runs, even if earlier steps errored
   const _dismissSplash = () => {
@@ -4875,6 +4920,41 @@ async function _restoreTestProgressFromFirebase() {
 // ════════════════════════════════════════════════════════════════
 //  FEATURE: DARK / LIGHT THEME TOGGLE
 // ════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════
+//  FONT SIZE CONTROL  A− / A+
+//  Persists across sessions via localStorage.
+//  Scale range: 0.75 (smallest) → 1.25 (largest), step 0.1
+// ════════════════════════════════════════════════════════════════
+
+function _initFontSize() {
+  const LS_KEY  = 'dca_card_font_scale';
+  const MIN     = 0.75;
+  const MAX     = 1.25;
+  const STEP    = 0.1;
+
+  // Apply saved scale on boot
+  let scale = parseFloat(ls_get(LS_KEY, 1)) || 1;
+  _applyFontScale(scale);
+
+  document.getElementById('btn-font-up')?.addEventListener('click', () => {
+    scale = parseFloat(Math.min(MAX, scale + STEP).toFixed(2));
+    _applyFontScale(scale);
+    ls_set(LS_KEY, scale);
+    TG.Haptic.light();
+  });
+
+  document.getElementById('btn-font-down')?.addEventListener('click', () => {
+    scale = parseFloat(Math.max(MIN, scale - STEP).toFixed(2));
+    _applyFontScale(scale);
+    ls_set(LS_KEY, scale);
+    TG.Haptic.light();
+  });
+}
+
+function _applyFontScale(scale) {
+  document.documentElement.style.setProperty('--card-font-scale', scale);
+}
 
 function _initTheme() {
   const saved = ls_get(LS.THEME, 'dark');
