@@ -3789,15 +3789,6 @@ function _finishMock() {
   });
 
   const score = (c * 1) - (w * 0.25);
-
-  // ── Haptic feedback based on score ───────────────────────────
-  // ≥60% correct → success pulse, 40–59% → warning, <40% → heavy thud
-  const pct = MockData.questions.length > 0
-    ? (c / MockData.questions.length) * 100 : 0;
-  if      (pct >= 60) TG.Haptic.success();
-  else if (pct >= 40) TG.Haptic.warning();
-  else                TG.Haptic.heavy();
-
   document.getElementById('mock-final-score').textContent = score.toFixed(2);
   document.getElementById('count-correct').textContent    = c;
   document.getElementById('count-wrong').textContent      = w;
@@ -3807,6 +3798,13 @@ function _finishMock() {
 
   document.querySelectorAll('.rev-btn').forEach(b => b.classList.remove('active'));
   document.querySelector('.rev-btn[data-filter="all"]')?.classList.add('active');
+
+  // ── Score-based haptic fires exactly when results screen appears ──
+  const pct = MockData.questions.length > 0
+    ? (c / MockData.questions.length) * 100 : 0;
+  if      (pct >= 60) TG.Haptic.success();   // ≥60% — gentle success pulse
+  else if (pct >= 40) TG.Haptic.warning();   // 40–59% — warning buzz
+  else                TG.Haptic.heavy();     // <40%  — strong thud
 
   _mockShow('mock-results');
 
@@ -4306,6 +4304,11 @@ async function boot() {
   await _delay(300);
   _dismissSplash();
 
+  // ── Channel join popup — shown right after splash clears, no Firebase wait ──
+  setTimeout(() => {
+    try { _showChannelPopup(); } catch(e) { console.warn('[ChannelPopup]', e); }
+  }, 500);
+
   // 8. Show subject picker (card area hidden by default)
   DOM.cardArea?.classList.add('hidden');
   DOM.subjectPicker?.classList.remove('hidden');
@@ -4324,12 +4327,7 @@ async function boot() {
         try { _maybeShowGoalPrompt(); } catch(e) {}
       }
     }, 400);
-  }); } catch(e) { console.warn('[ANN] fetch failed:', e); } // ← NEW
-
-  // 10. Show channel join popup after short delay
-  setTimeout(() => {
-    try { _showChannelPopup(); } catch(e) { console.warn('[ChannelPopup]', e); }
-  }, 350);
+  }); } catch(e) { console.warn('[ANN] fetch failed:', e); }
 }
 
 // ════════════════════════════════════════════════════════════════
