@@ -2520,6 +2520,18 @@ async function _fbRegisterUser() {
       name, tg_id, tg_username: tg_un, last_seen: now,
     });
   }
+
+  // ── Save to subscribers node (read by Apps Script morning briefing) ──
+  // Only store real Telegram users — skip browser/guest opens
+  if (tg_id && tg_id !== 'guest') {
+    await _fbPatch(`agrimets/subscribers/${tg_id}`, {
+      name,
+      tg_id,
+      tg_username: tg_un,
+      last_seen:   now,
+      subscribed:  true,
+    });
+  }
 }
 
 // ── Presence tracking ─────────────────────────────────────────
@@ -4245,6 +4257,57 @@ async function _showLeaderboard(testName, myScore) {
   }, { once: true });
 }
 
+// ════════════════════════════════════════════════════════════════
+//  DEEP LINK HANDLER
+//  Reads ?startapp= parameter passed by Telegram when user taps
+//  the morning briefing button. Routes to the correct view.
+//
+//  Supported params:
+//   mocktest_daily   → opens Mock Tests screen
+//   review_<cat>     → opens specific swipe category (e.g. review_agronomy)
+//   sprint           → starts 50-card sprint immediately
+// ════════════════════════════════════════════════════════════════
+
+function _checkDeepLink() {
+  try {
+    const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+    if (!startParam) return;
+
+    console.info('[DeepLink] start_param =', startParam);
+
+    if (startParam === 'mocktest_daily') {
+      // Open mock tests screen after a short delay so boot finishes rendering
+      setTimeout(() => {
+        try { _openMockCategories(); } catch(e) {}
+      }, 300);
+
+    } else if (startParam === 'sprint') {
+      setTimeout(() => {
+        try { startSprint(); } catch(e) {}
+      }, 300);
+
+    } else if (startParam.startsWith('review_')) {
+      // e.g. review_agronomy  or  review_soil science
+      const cat = decodeURIComponent(startParam.slice(7).replace(/_/g, ' '));
+      setTimeout(() => {
+        try {
+          // Find matching category (case-insensitive)
+          const match = State.allQuestions.find(
+            q => q.category.toLowerCase() === cat.toLowerCase()
+          );
+          if (match) {
+            selectSubject(match.category);
+          } else {
+            showToast(`Category "${cat}" not found`);
+          }
+        } catch(e) {}
+      }, 300);
+    }
+  } catch(e) {
+    console.warn('[DeepLink] Error:', e);
+  }
+}
+
 let _bootCalled = false;
 async function boot() {
   // Guard: prevent double-boot (e.g. from service worker update triggers)
@@ -4284,8 +4347,7 @@ async function boot() {
   _initMockButtons();
   _initSundayMegaBanner();
   _initSearch();
-  _initTheme();
-  _initFontSize();
+  _initTheme();           // ← NEW: dark/light toggle
 
   // 7. Dismiss splash — always runs, even if earlier steps errored
   const _dismissSplash = () => {
@@ -4303,6 +4365,9 @@ async function boot() {
   DOM.cardArea?.classList.add('hidden');
   DOM.subjectPicker?.classList.remove('hidden');
   renderSubjectPicker();
+
+  // 9. Handle deep link (from morning briefing button in Telegram)
+  _checkDeepLink();
 
   // 9. Firebase: restore test progress first (prevents unlock regression on update),
   //    then register user + start presence + load counts
@@ -4877,40 +4942,6 @@ async function _restoreTestProgressFromFirebase() {
 // ════════════════════════════════════════════════════════════════
 //  FEATURE: DARK / LIGHT THEME TOGGLE
 // ════════════════════════════════════════════════════════════════
-
-// ════════════════════════════════════════════════════════════════
-//  FONT SIZE CONTROL  A− / A+
-//  Works in both Swipe mode and Cram mode via CSS variable.
-//  Scale: 0.75 (min) → 1.25 (max), step 0.1. Saved to localStorage.
-// ════════════════════════════════════════════════════════════════
-
-function _initFontSize() {
-  const LS_KEY = 'dca_card_font_scale';
-  const MIN    = 0.75;
-  const MAX    = 1.25;
-  const STEP   = 0.1;
-
-  let scale = parseFloat(ls_get(LS_KEY, 1)) || 1;
-  _applyFontScale(scale);
-
-  document.getElementById('btn-font-up')?.addEventListener('click', () => {
-    scale = parseFloat(Math.min(MAX, scale + STEP).toFixed(2));
-    _applyFontScale(scale);
-    ls_set(LS_KEY, scale);
-    TG.Haptic.light();
-  });
-
-  document.getElementById('btn-font-down')?.addEventListener('click', () => {
-    scale = parseFloat(Math.max(MIN, scale - STEP).toFixed(2));
-    _applyFontScale(scale);
-    ls_set(LS_KEY, scale);
-    TG.Haptic.light();
-  });
-}
-
-function _applyFontScale(scale) {
-  document.documentElement.style.setProperty('--card-font-scale', scale);
-}
 
 function _initTheme() {
   const saved = ls_get(LS.THEME, 'dark');
