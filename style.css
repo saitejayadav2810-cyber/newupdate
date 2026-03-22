@@ -5722,6 +5722,7 @@ body {
 .ann-popup-overlay {
   position: fixed;
   inset: 0;
+  z-index: 10000;
   background: rgba(0,0,0,0.78);
   display: flex;
   align-items: center;
@@ -5786,6 +5787,7 @@ body {
 .goal-prompt-overlay {
   position: fixed;
   inset: 0;
+  z-index: 10000;
   background: rgba(0,0,0,0.80);
   display: flex;
   align-items: center;
