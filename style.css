@@ -641,7 +641,6 @@ body {
   white-space: nowrap;
 }
 
-/* ── Font size controls ──────────────────────────────────────── */
 .topbar-right-group {
   display: flex;
   align-items: center;
@@ -661,7 +660,7 @@ body {
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 700;
-  padding: 3px 6px;
+  padding: 3px 7px;
   cursor: pointer;
   line-height: 1;
   -webkit-tap-highlight-color: transparent;
@@ -857,7 +856,7 @@ body {
   letter-spacing: 0.15px;
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: center;        /* vertically centers text in remaining space */
   text-shadow: 0 1px 2px rgba(0,0,0,0.4);
   word-break: normal;
   overflow-wrap: break-word;
@@ -914,7 +913,7 @@ body {
   letter-spacing: 0.2px;
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: center;        /* vertically centers answer text */
   text-shadow: 0 0 12px rgba(0,255,136,0.35);
   word-break: normal;
   overflow-wrap: break-word;
@@ -1576,10 +1575,10 @@ body {
   -webkit-backdrop-filter: blur(6px);
   z-index: 9999;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  padding-bottom: calc(var(--safe-bottom) + 12px);
-  animation: overlay-in 0.12s ease;
+  padding: 24px;
+  animation: overlay-in 0.15s ease;
 }
 
 .channel-popup-overlay.hidden {
@@ -1594,19 +1593,19 @@ body {
 .channel-popup {
   background: linear-gradient(160deg, #13132a 0%, #0d0d1e 100%);
   border: 1px solid rgba(0,229,255,0.2);
-  border-radius: 24px 24px 16px 16px;
+  border-radius: 24px;
   padding: 32px 24px 24px;
   width: 100%;
-  max-width: 420px;
+  max-width: 380px;
   position: relative;
   text-align: center;
-  box-shadow: 0 -8px 48px rgba(0,229,255,0.08), 0 0 0 1px rgba(255,255,255,0.04);
-  animation: popup-slide-up 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 8px 48px rgba(0,229,255,0.12), 0 0 0 1px rgba(255,255,255,0.04);
+  animation: popup-zoom-in 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-@keyframes popup-slide-up {
-  from { transform: translateY(120px); opacity: 0; }
-  to   { transform: translateY(0);     opacity: 1; }
+@keyframes popup-zoom-in {
+  from { transform: scale(0.72); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
 }
 
 .channel-popup-close {
@@ -2851,7 +2850,7 @@ body {
   align-items: baseline;
   gap: 7px;
   font-family: var(--font-qa);
-  font-size: 17px;
+  font-size: calc(17px * var(--card-font-scale, 1));
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.55;
@@ -2868,7 +2867,7 @@ body {
 /* Hidden answer — revealed on tap */
 .cram-answer {
   font-family: var(--font-qa);
-  font-size: 17px;
+  font-size: calc(17px * var(--card-font-scale, 1));
   font-weight: 700;
   color: transparent;
   background: rgba(255, 255, 255, 0.06);
@@ -3998,27 +3997,6 @@ body {
   background: var(--cyan-dim);
   border-color: var(--cyan);
   color: var(--cyan);
-}
-
-.mock-retry-btn {
-  width: 100%;
-  padding: 17px 22px;
-  background: rgba(255,82,82,0.1);
-  border: 1.7px solid rgba(255,82,82,0.35);
-  border-radius: var(--r-lg);
-  color: var(--red);
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.08s;
-  margin-bottom: 10px;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.mock-retry-btn:active {
-  background: rgba(255,82,82,0.22);
-  border-color: var(--red);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -5301,23 +5279,6 @@ body {
   color: #ff6868;
   border-left-color: #ff5252;
 }
-
-.rev-bookmark-btn {
-  margin-top: 8px;
-  background: none;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--r-sm);
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 600;
-  padding: 5px 12px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: all 0.08s;
-  display: inline-block;
-}
-.rev-bookmark-btn:active { background: var(--cyan-dim); border-color: var(--cyan); color: var(--cyan); }
-.rev-bookmark-btn:disabled { opacity: 0.6; cursor: default; }
 
 /* ── Post-test Group Join Popup ───────────────────────────── */
 .post-test-popup-overlay {
