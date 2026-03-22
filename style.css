@@ -3361,7 +3361,7 @@ body {
   display: flex;
   align-items: center;
   gap: 14px;
-  background: linear-gradient(135deg, #0d1f2d 0%, #1a0d2e 100%);
+  background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
   border: 1.5px solid rgba(124,77,255,0.55);
   border-radius: var(--r-lg);
   padding: 0;
@@ -3390,7 +3390,7 @@ body {
   width: 5px;
   min-width: 5px;
   align-self: stretch;
-  background: linear-gradient(180deg, #7C4DFF, #00E5FF);
+  background: linear-gradient(180deg, var(--purple), var(--cyan));
   flex-shrink: 0;
 }
 
@@ -3420,7 +3420,7 @@ body {
 
 .mock-text span {
   font-size: 12px;
-  color: rgba(196,181,253,0.55);
+  color: var(--text-muted);
   font-weight: 500;
 }
 
@@ -5466,7 +5466,9 @@ body {
 }
 
 [data-theme="light"] .mock-cta-btn {
-  background: linear-gradient(135deg, #1a0a3a 0%, #0d1a2d 100%);
+  background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
+  border-color: rgba(92,53,204,0.45);
+  box-shadow: 0 4px 20px rgba(92,53,204,0.12);
 }
 
 [data-theme="light"] .mock-test-card,
