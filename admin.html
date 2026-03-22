@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AGRIMETS — Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:    #09090f; --s1: #11111d; --s2: #181826;
+      --bd:    rgba(255,255,255,0.07);
+      --cyan:  #00e5ff; --green: #00e676; --red: #ff5252; --amber: #ffab00;
+      --text:  #e8eaf6; --muted: #7986cb; --r: 12px;
+    }
+    body { background:var(--bg); color:var(--text); font-family:'DM Sans',system-ui,sans-serif; min-height:100vh; padding-bottom:60px; }
+
+    /* Header */
+    .hdr { background:var(--s1); border-bottom:1px solid var(--bd); padding:13px 18px; display:flex; align-items:center; gap:11px; position:sticky; top:0; z-index:100; }
+    .hdr-logo { font-size:20px; }
+    .hdr-title { font-size:16px; font-weight:800; color:var(--cyan); }
+    .hdr-sub   { font-size:11px; color:var(--muted); }
+    .hdr-right { margin-left:auto; display:flex; align-items:center; gap:7px; }
+    .dot { width:7px; height:7px; border-radius:50%; background:var(--muted); flex-shrink:0; transition:background 0.3s; }
+    .dot.on { background:var(--green); box-shadow:0 0 5px var(--green); }
+    .conn-lbl { font-size:11px; color:var(--muted); }
+
+    /* Layout */
+    .main { max-width:660px; margin:0 auto; padding:18px 14px; display:flex; flex-direction:column; gap:18px; }
+
+    /* Card */
+    .card { background:var(--s1); border:1px solid var(--bd); border-radius:16px; overflow:hidden; }
+    .ch { display:flex; align-items:center; gap:8px; padding:13px 15px 11px; border-bottom:1px solid var(--bd); }
+    .ch-icon  { font-size:15px; }
+    .ch-title { font-size:13px; font-weight:700; }
+    .ch-right { margin-left:auto; display:flex; gap:6px; align-items:center; }
+    .cb { padding:15px; display:flex; flex-direction:column; gap:13px; }
+
+    /* Stats */
+    .sg { display:grid; grid-template-columns:repeat(4,1fr); gap:9px; }
+    @media(max-width:460px){ .sg { grid-template-columns:repeat(2,1fr); } }
+    .st { background:var(--s2); border:1px solid var(--bd); border-radius:var(--r); padding:11px 8px; text-align:center; }
+    .sv { font-size:20px; font-weight:800; color:var(--cyan); }
+    .sl { font-size:9px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.04em; margin-top:3px; }
+
+    /* Form */
+    .fg { display:flex; flex-direction:column; gap:5px; }
+    .lbl { font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+    .inp,.txa,.sel {
+      background:var(--s2); border:1.5px solid var(--bd); border-radius:var(--r);
+      color:var(--text); font-family:inherit; font-size:14px; padding:9px 11px;
+      outline:none; width:100%; transition:border-color .15s;
+    }
+    .inp:focus,.txa:focus,.sel:focus { border-color:var(--cyan); }
+    .txa { resize:vertical; min-height:78px; line-height:1.55; }
+    .sel { appearance:none; cursor:pointer; }
+    .r2 { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+    @media(max-width:440px){ .r2 { grid-template-columns:1fr; } }
+
+    /* Emoji row */
+    .emoji-row { display:flex; gap:7px; align-items:flex-start; flex-wrap:wrap; }
+    .emo-inp {
+      background:var(--s2); border:1.5px solid var(--bd); border-radius:var(--r);
+      color:var(--text); font-size:16px; padding:8px; outline:none;
+      width:50px; text-align:center; flex-shrink:0; transition:border-color .15s;
+    }
+    .emo-inp:focus { border-color:var(--cyan); }
+    .emo-grid { display:flex; flex-wrap:wrap; gap:4px; flex:1; }
+    .ep {
+      background:var(--s2); border:1.5px solid var(--bd); border-radius:8px;
+      padding:4px 6px; font-size:14px; cursor:pointer; line-height:1;
+      transition:border-color .12s,background .12s; user-select:none;
+    }
+    .ep:hover { border-color:var(--cyan); background:rgba(0,229,255,.08); }
+
+    /* Preview */
+    .prev {
+      display:flex; align-items:center; gap:9px; padding:9px 12px;
+      border-radius:var(--r); border:1.5px solid var(--bd); font-size:13px; font-weight:500;
+      min-height:40px; transition:all .2s;
+    }
+    .prev.info    { background:rgba(0,180,255,.08); border-color:rgba(0,180,255,.25); }
+    .prev.success { background:rgba(0,230,118,.08); border-color:rgba(0,230,118,.25); }
+    .prev.warning { background:rgba(255,171,0,.08);  border-color:rgba(255,171,0,.28); }
+    .prev.danger  { background:rgba(255,82,82,.08);  border-color:rgba(255,82,82,.28); }
+    .pe { font-size:14px; flex-shrink:0; }
+    .pt { flex:1; color:var(--text); line-height:1.4; }
+
+    /* Chips */
+    .chips { display:flex; gap:6px; flex-wrap:wrap; }
+    .chip {
+      background:var(--s2); border:1.5px solid var(--bd); border-radius:20px;
+      padding:5px 11px; font-size:11px; font-weight:700; color:var(--muted);
+      cursor:pointer; transition:border-color .12s,color .12s; white-space:nowrap;
+    }
+    .chip.active,.chip:hover { border-color:var(--cyan); color:var(--cyan); }
+    .custom-row { display:none; align-items:center; gap:7px; flex-wrap:wrap; margin-top:4px; }
+    .custom-row.show { display:flex; }
+    .cinp {
+      background:var(--s2); border:1.5px solid var(--bd); border-radius:var(--r);
+      color:var(--text); font-family:inherit; font-size:13px; padding:6px 9px;
+      outline:none; width:80px; transition:border-color .15s;
+    }
+    .cinp:focus { border-color:var(--cyan); }
+    .csel {
+      background:var(--s2); border:1.5px solid var(--bd); border-radius:var(--r);
+      color:var(--text); font-family:inherit; font-size:13px; padding:6px 9px;
+      outline:none; cursor:pointer;
+    }
+    .custom-lbl { font-size:11px; color:var(--muted); }
+
+    /* Counter */
+    .ctr { font-size:10px; color:var(--muted); text-align:right; float:right; text-transform:none; letter-spacing:0; }
+    .ctr.over { color:var(--red); }
+
+    /* Buttons */
+    .btn-pri {
+      background:linear-gradient(135deg,#00e5ff,#0080c8); color:#000;
+      border:none; border-radius:var(--r); font-family:inherit; font-size:14px; font-weight:800;
+      padding:12px 18px; cursor:pointer; width:100%;
+      display:flex; align-items:center; justify-content:center; gap:7px;
+      transition:opacity .2s,transform .15s;
+    }
+    .btn-pri:hover   { opacity:.9; }
+    .btn-pri:active  { transform:scale(.97); }
+    .btn-pri:disabled { opacity:.4; cursor:not-allowed; }
+    .btn-sm {
+      background:var(--s2); border:1.5px solid var(--bd); color:var(--muted);
+      border-radius:var(--r); font-family:inherit; font-size:11px; font-weight:600;
+      padding:5px 10px; cursor:pointer; white-space:nowrap;
+      transition:border-color .12s,color .12s;
+    }
+    .btn-sm:hover { border-color:var(--cyan); color:var(--cyan); }
+    .btn-sm.rd:hover { border-color:var(--red); color:var(--red); }
+    .btn-sm.gn { border-color:rgba(0,230,118,.3); color:var(--green); }
+    .btn-red {
+      background:rgba(255,82,82,.08); border:1.5px solid rgba(255,82,82,.3); color:var(--red);
+      border-radius:var(--r); font-family:inherit; font-size:11px; font-weight:700;
+      padding:5px 9px; cursor:pointer; transition:background .15s;
+    }
+    .btn-red:hover { background:rgba(255,82,82,.16); }
+
+    /* Toggle */
+    .tgl-wrap { display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+    .tgl-box {
+      width:34px; height:19px; background:var(--s2); border:1.5px solid var(--bd);
+      border-radius:10px; position:relative; transition:background .2s,border-color .2s; flex-shrink:0;
+    }
+    .tgl-box::after {
+      content:''; position:absolute; width:11px; height:11px; background:var(--muted);
+      border-radius:50%; top:2px; left:2px; transition:transform .2s,background .2s;
+    }
+    input[type=checkbox] { display:none; }
+    input[type=checkbox]:checked + .tgl-box { background:rgba(0,229,255,.15); border-color:var(--cyan); }
+    input[type=checkbox]:checked + .tgl-box::after { transform:translateX(15px); background:var(--cyan); }
+
+    /* Schedule */
+    .dt-inp {
+      background:var(--s2); border:1.5px solid var(--bd); border-radius:var(--r);
+      color:var(--text); font-family:inherit; font-size:13px; padding:7px 10px;
+      outline:none; color-scheme:dark; width:100%; max-width:260px;
+      transition:border-color .15s;
+    }
+    .dt-inp:focus { border-color:var(--cyan); }
+
+    /* Announcement list */
+    #live-list { display:flex; flex-direction:column; gap:8px; }
+    .ai {
+      background:var(--s2); border:1.5px solid var(--bd); border-radius:var(--r);
+      padding:11px; display:grid; grid-template-columns:auto 1fr auto; gap:9px; align-items:start;
+    }
+    .ai.off { opacity:.5; }
+    .ai-emoji { font-size:14px; padding-top:1px; }
+    .ai-body  { min-width:0; }
+    .ai-msg   { font-size:13px; line-height:1.45; margin-bottom:4px; word-break:break-word; }
+    .ai-meta  { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+    .bdg {
+      display:inline-flex; align-items:center; border-radius:20px;
+      padding:1px 6px; font-size:9px; font-weight:700; text-transform:uppercase;
+    }
+    .bdg.info    { background:rgba(0,180,255,.12); color:#00b4d8; }
+    .bdg.success { background:rgba(0,230,118,.12); color:var(--green); }
+    .bdg.warning { background:rgba(255,171,0,.12);  color:var(--amber); }
+    .bdg.danger  { background:rgba(255,82,82,.12);  color:var(--red); }
+    .bdg.live    { background:rgba(0,230,118,.12); color:var(--green); }
+    .bdg.off     { background:rgba(121,134,203,.12); color:var(--muted); }
+    .ai-time { font-size:10px; color:var(--muted); }
+    .ai-acts { display:flex; flex-direction:column; gap:5px; }
+    .exp-wrap { height:2px; background:var(--bd); border-radius:2px; margin-top:5px; overflow:hidden; }
+    .exp-fill { height:100%; border-radius:2px; }
+
+    /* Quick actions */
+    .qa-btn {
+      background:var(--s2); border:1.5px solid var(--bd); border-radius:var(--r);
+      color:var(--muted); font-family:inherit; font-size:12px; font-weight:600;
+      padding:9px 12px; cursor:pointer; text-align:left;
+      display:flex; align-items:center; gap:8px;
+      transition:border-color .12s,color .12s;
+    }
+    .qa-btn:hover { border-color:var(--cyan); color:var(--text); }
+
+    /* Empty */
+    .empty { text-align:center; padding:24px; color:var(--muted); font-size:13px; }
+    .empty-icon { font-size:28px; margin-bottom:7px; }
+
+    /* Login */
+    #lg {
+      position:fixed; inset:0; background:var(--bg);
+      display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px;
+    }
+    .lc { background:var(--s1); border:1px solid var(--bd); border-radius:18px; padding:32px 22px; width:100%; max-width:300px; text-align:center; }
+    .li  { font-size:40px; margin-bottom:10px; }
+    .lt  { font-size:18px; font-weight:800; margin-bottom:4px; }
+    .ls  { font-size:12px; color:var(--muted); margin-bottom:20px; }
+    .le  { font-size:11px; color:var(--red); margin-top:7px; min-height:16px; }
+
+    /* Toast */
+    #toast {
+      position:fixed; bottom:22px; left:50%; transform:translateX(-50%);
+      background:var(--s1); border:1px solid var(--bd); border-radius:22px;
+      padding:9px 18px; font-size:12px; font-weight:600; color:var(--text);
+      white-space:nowrap; z-index:99999;
+      opacity:0; pointer-events:none; transition:opacity .2s;
+      box-shadow:0 8px 24px rgba(0,0,0,.5);
+    }
+    #toast.show { opacity:1; }
+
+    /* Spinner */
+    .spin {
+      width:16px; height:16px; border:2px solid rgba(0,229,255,.2);
+      border-top-color:var(--cyan); border-radius:50%;
+      animation:sp .7s linear infinite; display:inline-block;
+    }
+    @keyframes sp { to { transform:rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="lg">
+  <div class="lc">
+    <div class="li">⚡</div>
+    <div class="lt">AGRIMETS Admin</div>
+    <div class="ls">Enter your password</div>
+    <div class="fg" style="margin-bottom:11px;text-align:left;">
+      <label class="lbl">Password</label>
+      <input class="inp" id="admin-pass" type="password" placeholder="••••••••••" autocomplete="current-password" />
+    </div>
+    <button class="btn-pri" id="login-btn">🔓 Enter</button>
+    <div class="le" id="login-error"></div>
+  </div>
+</div>
+
+<!-- Header -->
+<header class="hdr">
+  <span class="hdr-logo">⚡</span>
+  <div>
+    <div class="hdr-title">AGRIMETS Admin</div>
+    <div class="hdr-sub">Dashboard &amp; Announcements</div>
+  </div>
+  <div class="hdr-right">
+    <div class="dot" id="status-dot"></div>
+    <span class="conn-lbl" id="status-label">Connecting…</span>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- Stats -->
+  <div class="card">
+    <div class="ch">
+      <span class="ch-icon">📊</span>
+      <span class="ch-title">Live Stats</span>
+      <div class="ch-right">
+        <label class="tgl-wrap" title="Auto-refresh every 30s">
+          <input type="checkbox" id="auto-chk" />
+          <div class="tgl-box"></div>
+          <span style="font-size:10px;color:var(--muted);">Auto</span>
+        </label>
+        <button class="btn-sm" id="btn-refresh">↻ Refresh</button>
+      </div>
+    </div>
+    <div class="cb">
+      <div class="sg">
+        <div class="st"><div class="sv" id="stat-online">—</div><div class="sl">🟢 Online</div></div>
+        <div class="st"><div class="sv" id="stat-total">—</div><div class="sl">👥 Total</div></div>
+        <div class="st"><div class="sv" id="stat-today">—</div><div class="sl">📅 Today</div></div>
+        <div class="st"><div class="sv" id="stat-ann">—</div><div class="sl">📢 Live</div></div>
+      </div>
+      <div id="upd-lbl" style="font-size:10px;color:var(--muted);text-align:right;"></div>
+    </div>
+  </div>
+
+  <!-- Push Announcement -->
+  <div class="card">
+    <div class="ch">
+      <span class="ch-icon">📢</span>
+      <span class="ch-title">Push Announcement</span>
+    </div>
+    <div class="cb">
+
+      <!-- Message -->
+      <div class="fg">
+        <label class="lbl">Message <span id="ctr" class="ctr">0 / 200</span></label>
+        <textarea class="txa" id="ann-msg" maxlength="200" placeholder="Type your announcement… (max 200 chars)"></textarea>
+      </div>
+
+      <!-- Emoji picker -->
+      <div class="fg">
+        <label class="lbl">Emoji</label>
+        <div class="emoji-row">
+          <input class="emo-inp" id="ann-emoji" type="text" maxlength="4" value="📢" />
+          <div class="emo-grid" id="emo-grid"></div>
+        </div>
+      </div>
+
+      <!-- Type + Preview -->
+      <div class="r2">
+        <div class="fg">
+          <label class="lbl">Type</label>
+          <select class="sel" id="ann-type">
+            <option value="info">🔵 Info</option>
+            <option value="success">🟢 Success</option>
+            <option value="warning">🟡 Warning</option>
+            <option value="danger">🔴 Alert</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="lbl">Preview</label>
+          <div class="prev info" id="ann-prev">
+            <span class="pe" id="prev-emoji">📢</span>
+            <span class="pt" id="prev-text">Your message…</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expires -->
+      <div class="fg">
+        <label class="lbl">Expires After</label>
+        <div class="chips" id="exp-chips">
+          <button class="chip" data-h="1">1 hr</button>
+          <button class="chip active" data-h="6">6 hrs</button>
+          <button class="chip" data-h="12">12 hrs</button>
+          <button class="chip" data-h="24">1 day</button>
+          <button class="chip" data-h="72">3 days</button>
+          <button class="chip" data-h="168">1 week</button>
+          <button class="chip" data-h="0">Never</button>
+          <button class="chip" data-h="c">Custom ✎</button>
+        </div>
+        <div class="custom-row" id="custom-row">
+          <input class="cinp" id="cval" type="number" min="1" max="9999" placeholder="e.g. 48" />
+          <select class="csel" id="cunit">
+            <option value="0.0167">Minutes</option>
+            <option value="1" selected>Hours</option>
+            <option value="24">Days</option>
+          </select>
+          <span class="custom-lbl" id="clbl"></span>
+        </div>
+      </div>
+
+      <!-- Schedule -->
+      <div class="fg">
+        <label class="tgl-wrap">
+          <input type="checkbox" id="sched-chk" />
+          <div class="tgl-box"></div>
+          <span class="lbl" style="margin:0;">Schedule for later</span>
+        </label>
+        <div id="sched-row" style="display:none;margin-top:8px;display:none;">
+          <input class="dt-inp" id="sched-dt" type="datetime-local" />
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;">Keep this tab open — push will fire at the scheduled time.</div>
+        </div>
+      </div>
+
+      <button class="btn-pri" id="btn-push">
+        <span id="push-lbl">📤 Push Announcement</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Active Announcements -->
+  <div class="card">
+    <div class="ch">
+      <span class="ch-icon">📋</span>
+      <span class="ch-title">Announcements</span>
+      <div class="ch-right">
+        <button class="btn-sm rd" id="btn-clr-exp">🗑 Clear Expired</button>
+        <button class="btn-sm" id="btn-load">↻ Load</button>
+      </div>
+    </div>
+    <div class="cb" style="padding:12px;">
+      <div id="live-list">
+        <div class="empty"><div class="empty-icon">📭</div>Click "Load" to view</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Messages -->
+  <div class="card">
+    <div class="ch">
+      <span class="ch-icon">⚡</span>
+      <span class="ch-title">Quick Messages</span>
+    </div>
+    <div class="cb" id="qa-list"></div>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ── Config ───────────────────────────────────────────────────
+const FB   = 'https://agrimets-a3c9c-default-rtdb.firebaseio.com';
+const HASH = 'a65d2d96104b759416486d1a47b68f24020bdfc2fcb7c3dccebcaa2eae90a9f8';
+const TTL  = 3 * 60 * 1000;
+
+const EMOJIS = ['📢','🔔','⚠️','🚨','✅','❌','🎉','🌾','📅','🏆','💡','🔥','⚡','📝','🎯','🛡','📊','🌟','🕐','🔄'];
+
+const QUICK = [
+  { e:'📅', t:'warning', lbl:'Exam Reminder',   msg:'Exam season is here! Stay consistent with your daily cards on AGRIMETS. All the best! 🌾' },
+  { e:'🌾', t:'success', lbl:'New Questions',    msg:'New questions added! Open AGRIMETS and tap Refresh to get the latest cards.' },
+  { e:'🎯', t:'info',    lbl:'Daily Target',     msg:"Have you hit your daily target today? Keep your streak alive on AGRIMETS! 🔥" },
+  { e:'⚡', t:'info',    lbl:'App Update',       msg:'AGRIMETS has been updated! Tap Refresh App & Data in the Progress tab.' },
+  { e:'🚨', t:'danger',  lbl:'Urgent Alert',     msg:'Important update from AGRIMETS team. Please open the app for details.' },
+  { e:'🏆', t:'success', lbl:'Exam Result',      msg:'Results are out! Check official portals. Keep preparing for upcoming exams with AGRIMETS 💪' },
+];
+
+// ── Auth ─────────────────────────────────────────────────────
+async function sha256(s) {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+document.getElementById('login-btn').addEventListener('click', async () => {
+  const v = document.getElementById('admin-pass').value.trim();
+  if (!v) return;
+  if (await sha256(v) === HASH) {
+    const lg = document.getElementById('lg');
+    lg.style.transition = 'opacity .3s'; lg.style.opacity = '0';
+    setTimeout(() => lg.remove(), 300);
+    init();
+  } else {
+    document.getElementById('login-error').textContent = '❌ Incorrect password';
+    document.getElementById('admin-pass').value = '';
+    document.getElementById('admin-pass').focus();
+  }
+});
+document.getElementById('admin-pass').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('login-btn').click(); });
+
+// ── Firebase ─────────────────────────────────────────────────
+const api = (path, opts={}) => {
+  // Only append .json if there's no query string already containing it
+  const url = path.includes('?') ? `${FB}/${path}` : `${FB}/${path}.json`;
+  return fetch(url, { cache:'no-store', ...opts })
+    .then(r => r.ok ? r.json() : null).catch(() => null);
+};
+
+const fbGet    = p      => api(p);
+const fbPut    = (p, d) => api(p, { method:'PUT',   headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) });
+const fbPatch  = (p, d) => api(p, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) });
+const fbDelete = p      => fetch(`${FB}/${p}.json`, { method:'DELETE' }).then(r => r.ok).catch(() => false);
+
+// ── Toast ────────────────────────────────────────────────────
+let _tt;
+const toast = (m, d=2600) => {
+  const el = document.getElementById('toast');
+  el.textContent = m; el.classList.add('show');
+  clearTimeout(_tt); _tt = setTimeout(() => el.classList.remove('show'), d);
+};
+
+// ── Status ───────────────────────────────────────────────────
+async function checkConn() {
+  const ok = await fbGet('agrimets/presence') !== null;
+  document.getElementById('status-dot').classList.toggle('on', ok);
+  document.getElementById('status-label').textContent = ok ? 'Firebase connected' : 'No connection';
+}
+
+// ── Stats ────────────────────────────────────────────────────
+async function loadStats() {
+  const [presence, users, anns] = await Promise.all([
+    fbGet('agrimets/presence'),
+    api('agrimets/users.json?shallow=true'),
+    fbGet('agrimets/announcements'),
+  ]);
+  const now = Date.now();
+  let online=0, total=0, today=0, live=0;
+  if (presence && typeof presence==='object') {
+    Object.values(presence).forEach(val => {
+      const ts = typeof val === 'object' ? Number(Object.values(val)[0]||0) : Number(val);
+      if (now - ts < TTL)          online++;
+      if (now - ts < 86_400_000)   today++;
+    });
+  }
+  if (users   && typeof users==='object')  total = Object.keys(users).length;
+  if (anns    && typeof anns==='object')   Object.values(anns).forEach(a => { if (a?.active && (!a.expiresAt||a.expiresAt>now)) live++; });
+
+  document.getElementById('stat-online').textContent = online.toLocaleString('en-IN');
+  document.getElementById('stat-total').textContent  = total.toLocaleString('en-IN');
+  document.getElementById('stat-today').textContent  = today.toLocaleString('en-IN');
+  document.getElementById('stat-ann').textContent    = live;
+  document.getElementById('upd-lbl').textContent     = '↻ ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+}
+
+// ── Auto refresh ─────────────────────────────────────────────
+let _ai;
+document.getElementById('auto-chk').addEventListener('change', e => {
+  if (e.target.checked) { _ai = setInterval(() => { loadStats(); checkConn(); }, 30_000); toast('↻ Auto ON'); }
+  else { clearInterval(_ai); toast('Auto OFF'); }
+});
+document.getElementById('btn-refresh').addEventListener('click', () => { loadStats(); checkConn(); toast('↻ Refreshed'); });
+
+// ── Emoji grid ────────────────────────────────────────────────
+const eg = document.getElementById('emo-grid');
+EMOJIS.forEach(e => {
+  const b = document.createElement('button');
+  b.className='ep'; b.textContent=e;
+  b.addEventListener('click', () => { document.getElementById('ann-emoji').value=e; updatePreview(); });
+  eg.appendChild(b);
+});
+
+// ── Preview ──────────────────────────────────────────────────
+function updatePreview() {
+  const msg   = document.getElementById('ann-msg').value.trim() || 'Your message…';
+  const emoji = document.getElementById('ann-emoji').value.trim() || '📢';
+  const type  = document.getElementById('ann-type').value;
+  const len   = document.getElementById('ann-msg').value.length;
+  document.getElementById('prev-emoji').textContent = emoji;
+  document.getElementById('prev-text').textContent  = msg;
+  document.getElementById('ann-prev').className     = 'prev ' + type;
+  const c = document.getElementById('ctr');
+  c.textContent = `${len} / 200`;
+  c.className   = 'ctr' + (len > 180 ? ' over' : '');
+}
+['ann-msg','ann-emoji'].forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
+document.getElementById('ann-type').addEventListener('change', updatePreview);
+
+// ── Expire chips ─────────────────────────────────────────────
+let selHrs = 6;
+document.getElementById('exp-chips').addEventListener('click', e => {
+  const chip = e.target.closest('.chip'); if (!chip) return;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  const h = chip.dataset.h;
+  document.getElementById('custom-row').classList.toggle('show', h==='c');
+  if (h !== 'c') selHrs = Number(h);
+});
+function updateCustomLbl() {
+  const v = Number(document.getElementById('cval').value) || 0;
+  const u = Number(document.getElementById('cunit').value);
+  const hrs = v * u;
+  document.getElementById('clbl').textContent = v > 0 ? (hrs>=24 ? `≈${(hrs/24).toFixed(1)}d` : `≈${hrs.toFixed(1)}h`) : '';
+  selHrs = hrs;
+}
+document.getElementById('cval').addEventListener('input', updateCustomLbl);
+document.getElementById('cunit').addEventListener('change', updateCustomLbl);
+
+// ── Schedule ─────────────────────────────────────────────────
+document.getElementById('sched-chk').addEventListener('change', e => {
+  document.getElementById('sched-row').style.display = e.target.checked ? 'block' : 'none';
+});
+const dtInp = document.getElementById('sched-dt');
+const def = new Date(Date.now()+3600_000);
+dtInp.value = def.toISOString().slice(0,16);
+
+// ── Push ─────────────────────────────────────────────────────
+document.getElementById('btn-push').addEventListener('click', async () => {
+  const msg   = document.getElementById('ann-msg').value.trim();
+  const emoji = document.getElementById('ann-emoji').value.trim() || '📢';
+  const type  = document.getElementById('ann-type').value;
+  if (!msg) { toast('⚠️ Enter a message'); return; }
+
+  // Resolve expiry
+  let expiresAt = null;
+  const isCustom = document.querySelector('.chip.active')?.dataset.h === 'c';
+  if (isCustom) {
+    if (!selHrs || selHrs <= 0) { toast('⚠️ Enter a valid custom time'); return; }
+    expiresAt = Date.now() + selHrs * 3_600_000;
+  } else if (selHrs > 0) {
+    expiresAt = Date.now() + selHrs * 3_600_000;
+  }
+
+  const isScheduled = document.getElementById('sched-chk').checked;
+  let scheduledAt = null;
+  if (isScheduled) {
+    const dv = document.getElementById('sched-dt').value;
+    if (!dv) { toast('⚠️ Set schedule time'); return; }
+    scheduledAt = new Date(dv).getTime();
+    if (scheduledAt <= Date.now()) { toast('⚠️ Must be in the future'); return; }
+  }
+
+  const lbl = document.getElementById('push-lbl');
+  lbl.innerHTML = '<span class="spin"></span> Pushing…';
+  document.getElementById('btn-push').disabled = true;
+
+  const now = Date.now();
+  const payload = {
+    message: msg, emoji, type,
+    active:    !isScheduled,
+    createdAt: now,
+    expiresAt: expiresAt || null,
+    ...(isScheduled ? { scheduledAt, scheduled:true } : {}),
+  };
+
+  const ok = await fbPut(`agrimets/announcements/ann_${now}`, payload);
+  lbl.textContent = '📤 Push Announcement';
+  document.getElementById('btn-push').disabled = false;
+
+  if (ok !== null) {
+    toast(isScheduled
+      ? `⏰ Scheduled ${new Date(scheduledAt).toLocaleString('en-IN',{dateStyle:'short',timeStyle:'short'})}`
+      : '✅ Pushed! Users see it on next load.', 3000);
+    document.getElementById('ann-msg').value = '';
+    updatePreview(); loadStats(); loadAnn();
+  } else {
+    toast('❌ Failed — check Firebase connection');
+  }
+});
+
+// ── Load announcements ────────────────────────────────────────
+function ft(ts) { return new Date(ts).toLocaleString('en-IN',{dateStyle:'short',timeStyle:'short'}); }
+
+function expBar(ann, now) {
+  if (!ann.expiresAt) return '';
+  const pct = Math.max(0, Math.min(100, (1-(now-ann.createdAt)/(ann.expiresAt-ann.createdAt))*100));
+  const col = pct>50?'var(--green)':pct>20?'var(--amber)':'var(--red)';
+  return `<div class="exp-wrap"><div class="exp-fill" style="width:${pct}%;background:${col};"></div></div>`;
+}
+
+async function loadAnn() {
+  const list = document.getElementById('live-list');
+  list.innerHTML = '<div style="text-align:center;padding:18px;"><span class="spin"></span></div>';
+  const data = await fbGet('agrimets/announcements');
+  const now  = Date.now();
+  if (!data || !Object.keys(data).length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">📭</div>No announcements</div>`;
+    return;
+  }
+  const items = Object.entries(data)
+    .map(([id,a]) => ({...a,id})).filter(a=>a.message)
+    .sort((a,b) => b.createdAt-a.createdAt);
+  if (!items.length) { list.innerHTML = `<div class="empty"><div class="empty-icon">📭</div>No announcements</div>`; return; }
+  list.innerHTML='';
+  items.forEach(ann => {
+    const isLive    = ann.active && (!ann.expiresAt||ann.expiresAt>now);
+    const isExpired = ann.expiresAt && ann.expiresAt<=now;
+    const status    = isExpired ? '<span class="bdg off">Expired</span>'
+      : ann.scheduled && !ann.active ? `<span class="bdg warning">⏰ ${ft(ann.scheduledAt)}</span>`
+      : isLive ? '<span class="bdg live">🟢 Live</span>'
+      : '<span class="bdg off">⏸ Paused</span>';
+
+    const el = document.createElement('div');
+    el.className = 'ai' + (isLive?'':' off');
+    el.innerHTML = `
+      <div class="ai-emoji">${ann.emoji||'📢'}</div>
+      <div class="ai-body">
+        <div class="ai-msg">${esc(ann.message||'')}</div>
+        <div class="ai-meta">
+          <span class="bdg ${ann.type||'info'}">${ann.type||'info'}</span>
+          ${status}
+          <span class="ai-time">${ft(ann.createdAt)}</span>
+          <span class="ai-time">exp: ${ann.expiresAt?ft(ann.expiresAt):'Never'}</span>
+        </div>
+        ${expBar(ann,now)}
+      </div>
+      <div class="ai-acts">
+        <button class="btn-sm ${isLive?'':'gn'}" data-id="${ann.id}" data-a="${ann.active?'off':'on'}">${ann.active?'⏸':'▶'}</button>
+        <button class="btn-red" data-id="${ann.id}" data-a="del">✕</button>
+      </div>`;
+    list.appendChild(el);
+  });
+
+  list.querySelectorAll('[data-a]').forEach(b => {
+    b.addEventListener('click', async () => {
+      const {id, a} = b.dataset; b.disabled=true;
+      if (a==='del')      { if (await fbDelete(`agrimets/announcements/${id}`)) { toast('🗑 Deleted'); loadAnn(); loadStats(); } else { toast('❌ Failed'); b.disabled=false; } }
+      else if (a==='off') { await fbPatch(`agrimets/announcements/${id}`,{active:false}); toast('⏸ Paused');    loadAnn(); loadStats(); }
+      else if (a==='on')  { await fbPatch(`agrimets/announcements/${id}`,{active:true});  toast('▶ Activated'); loadAnn(); loadStats(); }
+    });
+  });
+}
+
+// ── Clear expired ─────────────────────────────────────────────
+document.getElementById('btn-clr-exp').addEventListener('click', async () => {
+  const data = await fbGet('agrimets/announcements');
+  if (!data) { toast('Nothing found'); return; }
+  const now = Date.now(); let n=0;
+  await Promise.all(Object.entries(data).map(async ([id,a]) => {
+    if (a?.expiresAt && a.expiresAt<=now) { await fbDelete(`agrimets/announcements/${id}`); n++; }
+  }));
+  toast(n>0 ? `🗑 Cleared ${n} expired` : 'No expired entries');
+  if (n>0) { loadAnn(); loadStats(); }
+});
+
+document.getElementById('btn-load').addEventListener('click', loadAnn);
+
+// ── Quick messages ────────────────────────────────────────────
+const ql = document.getElementById('qa-list');
+QUICK.forEach(q => {
+  const b = document.createElement('button');
+  b.className='qa-btn';
+  b.innerHTML=`<span>${q.e}</span><span style="font-weight:700;color:var(--text);">${q.lbl}</span><span style="color:var(--muted);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${q.msg.slice(0,50)}…</span>`;
+  b.addEventListener('click', () => {
+    document.getElementById('ann-msg').value   = q.msg;
+    document.getElementById('ann-emoji').value = q.e;
+    document.getElementById('ann-type').value  = q.t;
+    updatePreview();
+    document.querySelector('.card:nth-child(2)').scrollIntoView({behavior:'smooth',block:'start'});
+    toast('✎ Loaded — edit and push!');
+  });
+  ql.appendChild(b);
+});
+
+// ── Utils ────────────────────────────────────────────────────
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Init ─────────────────────────────────────────────────────
+function init() { checkConn(); loadStats(); loadAnn(); updatePreview(); }
+</script>
+</body>
+</html>
