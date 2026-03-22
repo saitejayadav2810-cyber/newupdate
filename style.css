@@ -1543,10 +1543,10 @@ body {
   -webkit-backdrop-filter: blur(6px);
   z-index: 9999;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  padding-bottom: calc(var(--safe-bottom) + 12px);
-  animation: overlay-in 0.12s ease;
+  padding: 24px;
+  animation: overlay-in 0.15s ease;
 }
 
 .channel-popup-overlay.hidden {
@@ -1561,19 +1561,19 @@ body {
 .channel-popup {
   background: linear-gradient(160deg, #13132a 0%, #0d0d1e 100%);
   border: 1px solid rgba(0,229,255,0.2);
-  border-radius: 24px 24px 16px 16px;
+  border-radius: 24px;
   padding: 32px 24px 24px;
   width: 100%;
-  max-width: 420px;
+  max-width: 380px;
   position: relative;
   text-align: center;
-  box-shadow: 0 -8px 48px rgba(0,229,255,0.08), 0 0 0 1px rgba(255,255,255,0.04);
-  animation: popup-slide-up 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 8px 48px rgba(0,229,255,0.12), 0 0 0 1px rgba(255,255,255,0.04);
+  animation: popup-zoom-in 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-@keyframes popup-slide-up {
-  from { transform: translateY(120px); opacity: 0; }
-  to   { transform: translateY(0);     opacity: 1; }
+@keyframes popup-zoom-in {
+  from { transform: scale(0.7); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
 }
 
 .channel-popup-close {
