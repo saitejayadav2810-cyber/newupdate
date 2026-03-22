@@ -437,18 +437,27 @@
 <script>
 // ── CONFIG ───────────────────────────────────────────────────
 const FB_URL      = 'https://agrimets-a3c9c-default-rtdb.firebaseio.com';
-// Change this password in production — store in Firebase or env var for real security
-const ADMIN_PASS  = 'agrimets2025';
-const FB_ONLINE_TTL = 3 * 60 * 1000; // 3 min
+// Password is stored as SHA-256 hash — change by running:
+//   crypto.subtle.digest('SHA-256', new TextEncoder().encode('yourpassword'))
+//     .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
+// Current hash = SHA-256 of "agrimets2025"
+const ADMIN_PASS_HASH = 'a65d2d96104b759416486d1a47b68f24020bdfc2fcb7c3dccebcaa2eae90a9f8';
+const FB_ONLINE_TTL = 3 * 60 * 1000;
+
+async function _hashPassword(pw) {
+  const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2,'0')).join('');
+}
 
 // ── Login ────────────────────────────────────────────────────
 const loginGate = document.getElementById('login-gate');
 const loginBtn  = document.getElementById('login-btn');
 const loginErr  = document.getElementById('login-error');
 
-loginBtn.addEventListener('click', () => {
+loginBtn.addEventListener('click', async () => {
   const val = document.getElementById('admin-pass').value.trim();
-  if (val === ADMIN_PASS) {
+  const hash = await _hashPassword(val);
+  if (hash === ADMIN_PASS_HASH) {
     loginGate.style.opacity = '0';
     loginGate.style.transition = 'opacity 0.3s';
     setTimeout(() => loginGate.remove(), 300);
