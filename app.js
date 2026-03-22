@@ -3799,13 +3799,6 @@ function _finishMock() {
   document.querySelectorAll('.rev-btn').forEach(b => b.classList.remove('active'));
   document.querySelector('.rev-btn[data-filter="all"]')?.classList.add('active');
 
-  // ── Score-based haptic fires exactly when results screen appears ──
-  const pct = MockData.questions.length > 0
-    ? (c / MockData.questions.length) * 100 : 0;
-  if      (pct >= 60) TG.Haptic.success();
-  else if (pct >= 40) TG.Haptic.warning();
-  else                TG.Haptic.error();
-
   _mockShow('mock-results');
 
   // ── Leaderboard popup ────────────────────────────────────────
@@ -4304,11 +4297,6 @@ async function boot() {
   await _delay(300);
   _dismissSplash();
 
-  // Show channel popup immediately after splash — no Firebase wait
-  setTimeout(() => {
-    try { _showChannelPopup(); } catch(e) {}
-  }, 500);
-
   // 8. Show subject picker (card area hidden by default)
   DOM.cardArea?.classList.add('hidden');
   DOM.subjectPicker?.classList.remove('hidden');
@@ -4321,12 +4309,18 @@ async function boot() {
   try { _startPresence();  } catch(e) { console.warn('[FB] Presence failed:', e); }
   try { _initUserCount();  } catch(e) { console.warn('[FB] UserCount failed:', e); }
   try { _fetchAnnouncements().then(() => {
+    // Only show goal prompt if no announcement popup is currently visible
     setTimeout(() => {
       if (!document.getElementById('ann-popup-overlay')) {
         try { _maybeShowGoalPrompt(); } catch(e) {}
       }
     }, 400);
-  }); } catch(e) { console.warn('[ANN] fetch failed:', e); }
+  }); } catch(e) { console.warn('[ANN] fetch failed:', e); } // ← NEW
+
+  // 10. Show channel join popup after short delay
+  setTimeout(() => {
+    try { _showChannelPopup(); } catch(e) { console.warn('[ChannelPopup]', e); }
+  }, 350);
 }
 
 // ════════════════════════════════════════════════════════════════
