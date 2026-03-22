@@ -810,13 +810,36 @@ function _flipCard() {
 
 // ════════════════════════════════════════════════════════════════
 //  AI ANSWER EXPLAINER  (Gemini Flash — free tier)
+//
+//  API key is NOT stored in source code.
+//  Store it once in Firebase Realtime Database:
+//    agrimets/config/gemini_key  →  "AIzaSy..."
+//  The app fetches it on first use and caches it in memory.
 // ════════════════════════════════════════════════════════════════
 
-const _explainCache = {};
+const _explainCache = {};     // { questionId: explanationText }
+let   _geminiKey    = null;   // loaded from Firebase on first use
+let   _geminiKeyLoading = false;
 
-// ── Gemini API key — same one used in your automations scripts ──
-// Store it here or pull from a config. Free tier: 1500 req/day.
-const GEMINI_KEY = 'YOUR_GEMINI_API_KEY'; // ← paste your key here
+// ── Load key from Firebase once, then cache in memory ────────
+async function _loadGeminiKey() {
+  if (_geminiKey) return _geminiKey;
+  if (_geminiKeyLoading) {
+    await new Promise(r => setTimeout(r, 1500));
+    return _geminiKey;
+  }
+  _geminiKeyLoading = true;
+  try {
+    const key = await _fbGet('agrimets/config/gemini_key');
+    if (key && typeof key === 'string' && key.length > 10) {
+      _geminiKey = key.trim();
+    }
+  } catch (e) {
+    console.warn('[Explain] Could not load Gemini key from Firebase:', e);
+  }
+  _geminiKeyLoading = false;
+  return _geminiKey;
+}
 
 function _initExplainBtn() {
   const btn = document.getElementById('btn-explain');
@@ -831,7 +854,7 @@ function _initExplainBtn() {
 async function _showExplainSheet(question) {
   TG.Haptic.medium();
 
-  // Build sheet if not already in DOM
+  // Build bottom sheet DOM once
   let sheet = document.getElementById('explain-sheet-overlay');
   if (!sheet) {
     sheet = document.createElement('div');
@@ -857,8 +880,8 @@ async function _showExplainSheet(question) {
 
   const bodyEl = document.getElementById('explain-body');
   const qEl    = document.getElementById('explain-q');
-  qEl.textContent    = question.question;
-  bodyEl.innerHTML   = '<span class="explain-typing">Thinking…</span>';
+  qEl.textContent  = question.question;
+  bodyEl.innerHTML = '<span class="explain-typing">Thinking…</span>';
 
   // Show with animation
   sheet.classList.add('open');
@@ -866,10 +889,20 @@ async function _showExplainSheet(question) {
     requestAnimationFrame(() => sheet.classList.add('visible'))
   );
 
-  // Return cached result instantly
+  // Serve from session cache instantly
   const cacheKey = question.id;
   if (_explainCache[cacheKey]) {
     bodyEl.textContent = _explainCache[cacheKey];
+    return;
+  }
+
+  // Load API key from Firebase
+  const key = await _loadGeminiKey();
+  if (!key) {
+    bodyEl.innerHTML =
+      '<b>Setup needed:</b> Add your Gemini API key to Firebase:<br><br>' +
+      '<code>agrimets/config/gemini_key</code><br><br>' +
+      'Value: your key from <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com</a>';
     return;
   }
 
@@ -883,7 +916,7 @@ async function _showExplainSheet(question) {
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
       {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -894,18 +927,21 @@ async function _showExplainSheet(question) {
       }
     );
 
-    if (!res.ok) throw new Error(`Gemini API ${res.status}`);
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData?.error?.message || `HTTP ${res.status}`);
+    }
 
     const data = await res.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
       || 'Could not generate explanation.';
 
-    bodyEl.textContent     = text;
+    bodyEl.textContent      = text;
     _explainCache[cacheKey] = text;
 
   } catch (err) {
-    console.warn('[Explain] API error:', err);
-    bodyEl.textContent = '⚠️ Could not load explanation. Check your connection or API key.';
+    console.warn('[Explain] Gemini error:', err);
+    bodyEl.textContent = `⚠️ ${err.message || 'Could not load explanation. Check connection.'}`;
   }
 }
 
