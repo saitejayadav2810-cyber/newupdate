@@ -812,6 +812,153 @@ function _flipCard() {
 //  SWIPE HANDLERS
 // ════════════════════════════════════════════════════════════════
 
+// ════════════════════════════════════════════════════════════════
+//  AI ANSWER EXPLAINER  (Gemini 2.0 Flash Lite — free tier)
+//
+//  API key is NOT stored in source code.
+//  Store it once in Firebase Realtime Database:
+//    agrimets/config/gemini_key  →  "AIzaSy..."
+//  The app fetches it on first use and caches it in memory.
+//  Get your key FREE at: https://aistudio.google.com/apikey
+// ════════════════════════════════════════════════════════════════
+
+const _explainCache = {};     // { questionId: explanationText }
+let   _geminiKey    = null;   // loaded from Firebase on first use
+let   _geminiKeyLoading = false;
+
+// ── Load key from Firebase once, then cache in memory ────────
+async function _loadGeminiKey() {
+  if (_geminiKey) return _geminiKey;
+  if (_geminiKeyLoading) {
+    await new Promise(r => setTimeout(r, 1500));
+    return _geminiKey;
+  }
+  _geminiKeyLoading = true;
+  try {
+    const key = await _fbGet('agrimets/config/gemini_key');
+    if (key && typeof key === 'string' && key.length > 10) {
+      _geminiKey = key.trim();
+    }
+  } catch (e) {
+    console.warn('[Explain] Could not load Gemini key from Firebase:', e);
+  }
+  _geminiKeyLoading = false;
+  return _geminiKey;
+}
+
+function _initExplainBtn() {
+  const btn = document.getElementById('btn-explain');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const q = State.dailyCards[State.currentIndex];
+    if (!q || !State.isFlipped) return;
+    _showExplainSheet(q);
+  });
+}
+
+async function _showExplainSheet(question) {
+  TG.Haptic.medium();
+
+  // Build bottom sheet DOM once
+  let sheet = document.getElementById('explain-sheet-overlay');
+  if (!sheet) {
+    sheet = document.createElement('div');
+    sheet.id        = 'explain-sheet-overlay';
+    sheet.className = 'explain-overlay';
+    sheet.innerHTML = `
+      <div class="explain-sheet" id="explain-sheet">
+        <div class="explain-handle"></div>
+        <div class="explain-head">
+          <span class="explain-badge">🤖 AI Explanation</span>
+          <button class="explain-close" id="explain-close">✕</button>
+        </div>
+        <div class="explain-q" id="explain-q"></div>
+        <div class="explain-body" id="explain-body"></div>
+      </div>`;
+    document.body.appendChild(sheet);
+    document.getElementById('explain-close')
+      .addEventListener('click', _closeExplainSheet);
+    sheet.addEventListener('click', e => {
+      if (e.target === sheet) _closeExplainSheet();
+    });
+  }
+
+  const bodyEl = document.getElementById('explain-body');
+  const qEl    = document.getElementById('explain-q');
+  qEl.textContent  = question.question;
+  bodyEl.innerHTML = '<span class="explain-typing">Thinking…</span>';
+
+  // Show with animation
+  sheet.classList.add('open');
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => sheet.classList.add('visible'))
+  );
+
+  // Serve from session cache instantly
+  const cacheKey = question.id;
+  if (_explainCache[cacheKey]) {
+    bodyEl.textContent = _explainCache[cacheKey];
+    return;
+  }
+
+  // Load API key from Firebase
+  const key = await _loadGeminiKey();
+  if (!key) {
+    bodyEl.innerHTML =
+      '<b>Setup needed:</b> Add your Gemini API key to Firebase:<br><br>' +
+      '<code>agrimets/config/gemini_key</code><br><br>' +
+      'Value: your key from <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com</a>';
+    return;
+  }
+
+  const prompt =
+    `You are an agriculture exam tutor for Indian competitive exams (ICAR, IBPS AFO, NABARD, FCI).\n\n` +
+    `Question: ${question.question}\n` +
+    `Answer: ${question.answer}\n` +
+    `Category: ${question.category || 'Agriculture'}\n\n` +
+    `Explain in exactly 2-3 simple sentences why this is the correct answer. ` +
+    `Focus on the key fact a student must remember. Be concise and exam-focused.`;
+
+  try {
+    // Using gemini-2.0-flash-lite: higher free-tier rate limits than gemini-2.0-flash
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${key}`,
+      {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents:         [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 200, temperature: 0.3 },
+        }),
+      }
+    );
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData?.error?.message || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
+      || 'Could not generate explanation.';
+
+    bodyEl.textContent      = text;
+    _explainCache[cacheKey] = text;
+
+  } catch (err) {
+    console.warn('[Explain] Gemini error:', err);
+    bodyEl.textContent = `⚠️ ${err.message || 'Could not load explanation. Check connection.'}`;
+  }
+}
+
+function _closeExplainSheet() {
+  const sheet = document.getElementById('explain-sheet-overlay');
+  if (!sheet) return;
+  sheet.classList.remove('visible');
+  setTimeout(() => sheet.classList.remove('open'), 300);
+  TG.Haptic.select();
+}
+
 // ── Build HTML for ★ bullet-point questions ───────────────────
 // All points rendered immediately — each on its own line
 function _buildBulletHTML(points) {
@@ -4278,6 +4425,7 @@ async function boot() {
   // 6. Init tabs and buttons
   _initTabs();
   _initButtons();
+  _initExplainBtn();
   _initModeToggle();
   _initGlossarySheet();
   _initDailyTarget();
