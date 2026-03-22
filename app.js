@@ -2243,7 +2243,12 @@ function _initButtons() {
     const q = State.dailyCards[State.currentIndex];
     if (!q) return;
     TG.Haptic.medium();
-    _shareCard(q);
+    // Use image share when card is flipped (answer visible), plain text otherwise
+    if (State.isFlipped) {
+      _shareCardAsImage(q);
+    } else {
+      _shareCard(q);
+    }
   });
 
   // ── Sprint: button-row Know It / Don't Know ────────────────
@@ -4295,8 +4300,14 @@ async function boot() {
   try { _fbRegisterUser(); } catch(e) { console.warn('[FB] Register failed:', e); }
   try { _startPresence();  } catch(e) { console.warn('[FB] Presence failed:', e); }
   try { _initUserCount();  } catch(e) { console.warn('[FB] UserCount failed:', e); }
-  try { _fetchAnnouncements(); } catch(e) { console.warn('[ANN] fetch failed:', e); } // ← NEW
-  setTimeout(() => { try { _maybeShowGoalPrompt(); } catch(e) {} }, 800); // ← NEW
+  try { _fetchAnnouncements().then(() => {
+    // Only show goal prompt if no announcement popup is currently visible
+    setTimeout(() => {
+      if (!document.getElementById('ann-popup-overlay')) {
+        try { _maybeShowGoalPrompt(); } catch(e) {}
+      }
+    }, 400);
+  }); } catch(e) { console.warn('[ANN] fetch failed:', e); } // ← NEW
 
   // 10. Show channel join popup after short delay
   setTimeout(() => {
@@ -4967,8 +4978,19 @@ function _shareCardAsImage(question) {
   const badgeX = SIZE - PAD - badgeW;
   const badgeY = 64;
 
+  // roundRect not available in older WebView — use manual path
   ctx.beginPath();
-  ctx.roundRect(badgeX, badgeY, badgeW, 38, 19);
+  const br = 19;
+  ctx.moveTo(badgeX + br, badgeY);
+  ctx.lineTo(badgeX + badgeW - br, badgeY);
+  ctx.quadraticCurveTo(badgeX + badgeW, badgeY, badgeX + badgeW, badgeY + br);
+  ctx.lineTo(badgeX + badgeW, badgeY + 38 - br);
+  ctx.quadraticCurveTo(badgeX + badgeW, badgeY + 38, badgeX + badgeW - br, badgeY + 38);
+  ctx.lineTo(badgeX + br, badgeY + 38);
+  ctx.quadraticCurveTo(badgeX, badgeY + 38, badgeX, badgeY + 38 - br);
+  ctx.lineTo(badgeX, badgeY + br);
+  ctx.quadraticCurveTo(badgeX, badgeY, badgeX + br, badgeY);
+  ctx.closePath();
   ctx.fillStyle = isLight ? 'rgba(0,100,255,0.15)' : 'rgba(0,229,255,0.15)';
   ctx.fill();
   ctx.fillStyle = isLight ? '#0050cc' : '#00e5ff';
@@ -5107,14 +5129,10 @@ async function _fetchAnnouncements() {
       // Skip if the announcement's own expiry has passed
       if (ann.expiresAt && ann.expiresAt < now) return;
 
-      // User-seen check: don't show again within the announcement's active window
+      // User-seen check: once a user dismisses an announcement ID, never show it
+      // again until it expires and admin creates a new one (new ID = new timestamp)
       const seenAt = seenMap[id];
-      if (seenAt) {
-        // Never-expiring announcement → never show again once seen
-        if (!ann.expiresAt) return;
-        // Still within expiry window since user saw it → skip
-        if (seenAt < ann.expiresAt) return;
-      }
+      if (seenAt) return;
 
       if (!latest || ann.createdAt > latest.createdAt) {
         latest = { ...ann, id };
