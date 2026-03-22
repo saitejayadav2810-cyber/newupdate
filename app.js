@@ -3721,13 +3721,7 @@ function _loadMockQuestion() {
 }
 
 function _handleMockAnswer(selectedText, correctText, qObj, idx) {
-  // ── Haptic feedback: light = correct, heavy = incorrect ──────
-  const isCorrect = selectedText.trim() === (correctText || '').trim();
-  if (isCorrect) {
-    TG.Haptic.success();   // single gentle pulse — right answer
-  } else {
-    TG.Haptic.heavy();     // strong vibration — wrong answer
-  }
+  TG.Haptic.light();
 
   // ── Store the selection (overwrite previous choice freely) ──
   MockData.answers[idx] = selectedText;
@@ -3759,7 +3753,6 @@ function _finishMock() {
   if (MockData.testSubmitted) return;  // guard against double-call
   MockData.testSubmitted = true;
   clearInterval(MockData.timerInterval);
-  TG.Haptic.success();
 
   // ── Build history from stored answers ────────────────────────
   MockData.history = [];
@@ -3796,6 +3789,15 @@ function _finishMock() {
   });
 
   const score = (c * 1) - (w * 0.25);
+
+  // ── Haptic feedback based on score ───────────────────────────
+  // ≥60% correct → success pulse, 40–59% → warning, <40% → heavy thud
+  const pct = MockData.questions.length > 0
+    ? (c / MockData.questions.length) * 100 : 0;
+  if      (pct >= 60) TG.Haptic.success();
+  else if (pct >= 40) TG.Haptic.warning();
+  else                TG.Haptic.heavy();
+
   document.getElementById('mock-final-score').textContent = score.toFixed(2);
   document.getElementById('count-correct').textContent    = c;
   document.getElementById('count-wrong').textContent      = w;
