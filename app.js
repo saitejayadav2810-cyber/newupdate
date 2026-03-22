@@ -3802,17 +3802,6 @@ function _finishMock() {
 
   _mockShow('mock-results');
 
-  // ── Show retry button only when there are wrong answers ──────
-  const retryBtn = document.getElementById('btn-retry-wrong');
-  if (retryBtn) {
-    if (w > 0) {
-      retryBtn.classList.remove('hidden');
-      retryBtn.textContent = `⟳ Retry ${w} Wrong Answer${w !== 1 ? 's' : ''}`;
-    } else {
-      retryBtn.classList.add('hidden');
-    }
-  }
-
   // ── Leaderboard popup ────────────────────────────────────────
   const testName = MockData.currentTest?.name || 'Mock Test';
   setTimeout(() => {
@@ -3879,18 +3868,8 @@ function _renderMockReview(filter) {
       </div>`;
     }
 
-    div.innerHTML = `<div class="rev-q">${_escHtml(h.question)}</div>${ansHtml}
-      <button class="rev-bookmark-btn" data-q='${JSON.stringify({id: h.question, question: h.question, answer: h.correct, category: MockData.currentTest?.name || 'Mock Test'})}'>🔖 Save</button>`;
+    div.innerHTML = `<div class="rev-q">${_escHtml(h.question)}</div>${ansHtml}`;
     list.appendChild(div);
-
-    // wire bookmark button
-    div.querySelector('.rev-bookmark-btn')?.addEventListener('click', (e) => {
-      const q = JSON.parse(e.currentTarget.dataset.q);
-      q.id = 'mock_' + btoa(q.question).slice(0, 12);
-      saveCard(q);
-      e.currentTarget.textContent = '✓ Saved';
-      e.currentTarget.disabled = true;
-    });
   });
 }
 
@@ -3985,28 +3964,6 @@ function _initMockButtons() {
           TG.replaceBack(() => { showSubjectPicker(); });
         });
       }
-    });
-  });
-
-  // ── Retry wrong answers ───────────────────────────────────────
-  document.getElementById('btn-retry-wrong')?.addEventListener('click', () => {
-    const wrongQs = MockData.history
-      .filter(h => h.status === 'wrong')
-      .map(h => ({
-        question: h.question,
-        answer:   h.correct,
-        opt_a: h.opts?.a || '', opt_b: h.opts?.b || '',
-        opt_c: h.opts?.c || '', opt_d: h.opts?.d || '',
-        opt_e: h.opts?.e || '',
-        category: MockData.currentTest?.name || 'Mock Test',
-        test_no:  'Retry',
-      }));
-    if (wrongQs.length === 0) return;
-    TG.Haptic.medium();
-    _startMockTest({
-      testNo:    'Retry',
-      name:      `Retry — ${MockData.currentTest?.name || 'Wrong Answers'}`,
-      questions: wrongQs,
     });
   });
 
@@ -4923,17 +4880,16 @@ async function _restoreTestProgressFromFirebase() {
 
 // ════════════════════════════════════════════════════════════════
 //  FONT SIZE CONTROL  A− / A+
-//  Persists across sessions via localStorage.
-//  Scale range: 0.75 (smallest) → 1.25 (largest), step 0.1
+//  Works in both Swipe mode and Cram mode via CSS variable.
+//  Scale: 0.75 (min) → 1.25 (max), step 0.1. Saved to localStorage.
 // ════════════════════════════════════════════════════════════════
 
 function _initFontSize() {
-  const LS_KEY  = 'dca_card_font_scale';
-  const MIN     = 0.75;
-  const MAX     = 1.25;
-  const STEP    = 0.1;
+  const LS_KEY = 'dca_card_font_scale';
+  const MIN    = 0.75;
+  const MAX    = 1.25;
+  const STEP   = 0.1;
 
-  // Apply saved scale on boot
   let scale = parseFloat(ls_get(LS_KEY, 1)) || 1;
   _applyFontScale(scale);
 
